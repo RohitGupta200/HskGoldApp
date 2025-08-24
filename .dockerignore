@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+**/build/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+*.iml
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if any)
+node_modules/
+
+# Local env and secrets
+.env
+service-account.json
+firebase-service-account.json
+
+# Others
+**/.cache/

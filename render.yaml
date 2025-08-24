@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: capgold-server
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: JAVA_VERSION
+        value: 17
+      - key: DATABASE_URL
+        fromDatabase: capgold-db
+        property: connectionString
+      - key: DB_USER
+        fromDatabase: capgold-db
+        property: user
+      - key: DB_PASSWORD
+        fromDatabase: capgold-db
+        property: password
+      - key: JWT_SECRET
+        sync: false
+      - key: APP_BASE_URL
+        value: https://capgold-server.onrender.com
+      - key: APP_ENV
+        value: production
+      - key: SHOW_DETAILED_ERRORS
+        value: "false"
+      # Set this to the absolute path of the Secret File you create in Render, e.g. /etc/secrets/firebase.json
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase.json
+
+# Provision a managed PostgreSQL database and wire it to the service above
+# Note: Render will generate the actual credentials; we just reference them above.
+databases:
+  - name: capgold-db
+    databaseName: capgold
+    plan: free
