@@ -1,0 +1,388 @@
+package org.cap.gold.auth
+
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.Json
+import org.cap.gold.auth.model.*
+import org.cap.gold.model.User
+import org.cap.gold.util.validatePhoneNumber
+import org.cap.gold.util.validatePassword
+import org.cap.gold.isDebug
+
+// Platform-specific synchronization
+@OptIn(ExperimentalMultiplatform::class)
+@OptionalExpectation
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+expect annotation class Synchronized()
+
+// JVM implementation
+@Target(AnnotationTarget.FUNCTION)
+actual typealias Synchronized = kotlin.jvm.Synchronized
+
+/**
+ * Implementation of [AuthService] using Ktor client for network requests.
+ * Handles user authentication, token management, and user session state.
+ *
+ * @property baseUrl The base URL of the authentication server
+ * @property tokenManager Handles token storage and refresh logic
+ */
+class KtorAuthService(
+    private val baseUrl: String,
+    private val tokenManager: TokenManager
+) : AuthService, CoroutineScope by CoroutineScope(Dispatchers.Default + SupervisorJob()) {
+    // Private properties for managing state
+    private var _currentUserValue: User? = null
+    private val _authState = MutableStateFlow<User?>(null)
+    private val _isLoading = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
+    
+    // HTTP client with all necessary configurations
+    private val client = HttpClient {
+        install(ContentNegotiation) {
+            json(Json {
+                prettyPrint = true
+                isLenient = true
+                ignoreUnknownKeys = true
+            })
+        }
+        
+        defaultRequest {
+            url(baseUrl)
+            contentType(ContentType.Application.Json)
+        }
+        
+        // Configure timeouts
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30000
+            connectTimeoutMillis = 30000
+            socketTimeoutMillis = 30000
+        }
+        
+        // Only enable logging in debug builds
+        if (isDebug) {
+            install(Logging) {
+                level = LogLevel.ALL
+            }
+        }
+        
+        // Install auth provider for automatic token refresh
+        install(Auth) {
+            bearer {
+                loadTokens {
+                    tokenManager.tokens.value?.let { tokens ->
+                        BearerTokens(
+                            accessToken = tokens.accessToken,
+                            refreshToken = tokens.refreshToken
+                        )
+                    }
+                }
+                
+                refreshTokens {
+                    try {
+                        // Try to refresh the token
+                        val newTokens = tokenManager.refreshToken()
+                        if (newTokens != null) {
+                            BearerTokens(
+                                accessToken = newTokens.accessToken,
+                                refreshToken = newTokens.refreshToken
+                            )
+                        } else {
+                            // If refresh fails, clear tokens and return null
+                            tokenManager.clearTokens()
+                            null
+                        }
+                    } catch (e: Exception) {
+                        // If there's an error, clear tokens and return null
+                        tokenManager.clearTokens()
+                        null
+                    }
+                }
+                
+                sendWithoutRequest { request ->
+                    // Don't send auth header for these paths
+                    request.url.encodedPath.let { path ->
+                        path.endsWith("/auth/signin/phone") || 
+                        path.endsWith("/auth/signup/phone") ||
+                        path.endsWith("/auth/refresh") ||
+                        path.endsWith("/auth/password/reset/sms")
+                    }.not()
+                }
+            }
+        }
+    }
+    
+    // Region: AuthService Implementation
+    
+    override val isLoading: StateFlow<Boolean> = _isLoading
+    override val error: StateFlow<String?> = _error
+    override val currentUser: User?
+        @Synchronized get() = _currentUserValue
+    override val authState: StateFlow<User?> = _authState
+
+    private fun clearError() {
+        _error.value = null
+    }
+    
+    private fun setError(message: String) {
+        _error.value = message
+    }
+
+    override suspend fun signInWithPhone(phoneNumber: String, password: String): AuthResult<User> {
+        _isLoading.value = true
+        _error.value = null
+        
+        return try {
+            // Validate input
+            validatePhoneNumber(phoneNumber).let { validation ->
+                if (!validation.success) {
+                    throw IllegalArgumentException(validation.errorMessage ?: "Invalid phone number")
+                }
+            }
+            
+            if (password.isBlank()) {
+                throw IllegalArgumentException("Password cannot be empty")
+            }
+            
+            // Make the API call
+            val response: AuthResponse = client.post("auth/signin/phone") {
+                setBody(PhoneSignInRequest(phoneNumber, password))
+            }.body()
+            
+            // Create user from response
+            val user = User(
+                id = response.user.id,
+                phoneNumber = phoneNumber,
+                email = response.user.email,
+                displayName = response.user.displayName,
+                photoUrl = response.user.photoUrl,
+                isEmailVerified = response.user.isEmailVerified
+            )
+            
+            // Update tokens and state
+            tokenManager.updateTokens(response)
+            _currentUserValue = user
+            _authState.value = user
+            
+            AuthResult.Success(user)
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(e)
+            _error.value = errorMessage.value
+            AuthResult.Error(errorMessage.value, e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    override suspend fun createUserWithPhone(
+        phoneNumber: String,
+        password: String,
+        displayName: String?
+    ): AuthResult<User> {
+        _isLoading.value = true
+        _error.value = null
+        
+        return try {
+            // Validate input
+            validatePhoneNumber(phoneNumber).let { validation ->
+                if (!validation.success) {
+                    throw IllegalArgumentException(validation.errorMessage ?: "Invalid phone number")
+                }
+            }
+            
+            validatePassword(password).let { validation ->
+                if (!validation.success) {
+                    throw IllegalArgumentException(validation.errorMessage ?: "Invalid password")
+                }
+            }
+            
+            // Make the API call
+            val response: AuthResponse = client.post("auth/signup/phone") {
+                setBody(PhoneSignUpRequest(phoneNumber, password, displayName))
+            }.body()
+            
+            // Create user from response
+            val user = User(
+                id = response.user.id,
+                phoneNumber = phoneNumber,
+                email = response.user.email,
+                displayName = response.user.displayName ?: displayName,
+                photoUrl = response.user.photoUrl,
+                isEmailVerified = response.user.isEmailVerified
+            )
+            
+            // Update tokens and state
+            tokenManager.updateTokens(response)
+            _currentUserValue = user
+            _authState.value = user
+            
+            AuthResult.Success(user)
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(e)
+            _error.value = errorMessage.value
+            AuthResult.Error(errorMessage.value, e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    override suspend fun sendPasswordResetSms(phoneNumber: String): AuthResult<Unit> {
+        _isLoading.value = true
+        _error.value = null
+        
+        return try {
+            // Validate input
+            validatePhoneNumber(phoneNumber).let { validation ->
+                if (!validation.success) {
+                    throw IllegalArgumentException(validation.errorMessage ?: "Invalid phone number")
+                }
+            }
+            
+            // Make the API call
+            client.post<Unit>("auth/password/reset/sms") {
+                setBody(PasswordResetRequest(phoneNumber))
+            }
+            
+            AuthResult.Success(Unit)
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(e)
+            _error.value = errorMessage.value
+            AuthResult.Error(errorMessage.value, e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    override suspend fun updateProfile(
+        displayName: String?,
+        photoUrl: String?
+    ): AuthResult<Unit> {
+        _isLoading.value = true
+        _error.value = null
+        
+        return try {
+            val currentUser = _currentUserValue ?: 
+                throw IllegalStateException("Not authenticated")
+            
+            // Make the API call
+            val response: AuthResponse = client.put("auth/profile") {
+                setBody(UpdateProfileRequest(displayName, photoUrl))
+            }.body()
+            
+            // Create updated user
+            val updatedUser = currentUser.copy(
+                displayName = displayName ?: currentUser.displayName,
+                photoUrl = photoUrl ?: currentUser.photoUrl
+            )
+            
+            // Update local user data
+            _currentUserValue = updatedUser
+            _authState.value = updatedUser
+            
+            AuthResult.Success(Unit)
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(
+                e,
+                StringResource("Failed to update profile")
+            )
+            _error.value = errorMessage.value
+            AuthResult.Error(errorMessage.value, e)
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    override suspend fun signOut() {
+        _isLoading.value = true
+        _error.value = null
+        
+        try {
+            // Try to notify the server about sign out
+            try {
+                client.post<Unit>("auth/signout")
+            } catch (e: Exception) {
+                // Log error but continue with local sign out
+                println("Error during server sign out: ${e.message}")
+            }
+            
+            // Clear tokens and user data
+            tokenManager.clearTokens()
+            _currentUserValue = null
+            _authState.value = null
+            
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(
+                e,
+                StringResource("Failed to sign out")
+            )
+            _error.value = errorMessage.value
+            throw e // Re-throw to allow caller to handle if needed
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    /**
+     * Call this when the app starts to check if the user is already authenticated
+     */
+    override suspend fun checkAuthState() {
+        _isLoading.value = true
+        _error.value = null
+        
+        try {
+            // Check if we have tokens first
+            val tokens = tokenManager.tokens.value
+            if (tokens == null) {
+                _currentUserValue = null
+                _authState.value = null
+                return
+            }
+            
+            // Try to fetch current user
+            val response: AuthResponse = client.get("auth/me").body()
+            
+            // Create user from response
+            val user = User(
+                id = response.user.id,
+                phoneNumber = response.user.phoneNumber,
+                email = response.user.email,
+                displayName = response.user.displayName,
+                photoUrl = response.user.photoUrl,
+                isEmailVerified = response.user.isEmailVerified
+            )
+            
+            _currentUserValue = user
+            _authState.value = user
+            
+        } catch (e: Exception) {
+            val errorMessage = AuthErrorHandler.handleAuthError(e)
+            _error.value = errorMessage.value
+            
+            // If unauthorized, clear tokens and user data
+            if (e is ClientRequestException && e.response.status == HttpStatusCode.Unauthorized) {
+                tokenManager.clearTokens()
+                _currentUserValue = null
+                _authState.value = null
+            }
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+    // Clean up resources when this service is no longer needed
+    fun dispose() {
+        this.cancel()
+        client.close()
+    }
+}

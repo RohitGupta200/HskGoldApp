@@ -1,0 +1,114 @@
+# Gradle files
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Log files
+*.log
+logs/
+
+# Environment variables
+.env
+
+# Firebase service account key
+service-account.json
+
+# Local development files
+local.properties
+
+# Build output
+dist/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Ktor auto-reload
+.ktor/
+
+# H2 database files
+*.db
+*.h2.db
+*.lock
+
+# Java class files
+*.class
+
+# Virtual machine crash logs
+hs_err_*
+
+# Application specific
+/keystore/
+*.p12
+*.pem
+*.crt
+*.key
+
+# Kotlin
+.metadata
+.classpath
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# KTLint
+.ktlint
+
+# Temp files
+*.swp
+*~
+*.swo
+*#
+*#*
+.#*
+
+# Application specific
+/keystore/
+*.p12
+*.pem
+*.crt
+*.key
+
+# Logs
+logs/
+*.log
+
+# Local configuration files
+config/local/
+
+# Build output
+dist/
+
+# IDE specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Gradle files
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Environment variables
+.env
+
+# Firebase service account key
+service-account.json
+
+# Local development files
+local.properties
