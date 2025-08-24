@@ -9,7 +9,7 @@ COPY . .
 RUN chmod +x ./gradlew && sed -i 's/\r$//' ./gradlew
 
 # Build only the server distribution
-RUN ./gradlew --no-daemon :server:installDist
+RUN ./gradlew --no-daemon --stacktrace --info :server:installDist
 
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:17-jre
