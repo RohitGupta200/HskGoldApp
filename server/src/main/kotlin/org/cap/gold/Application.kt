@@ -251,7 +251,7 @@ fun Application.module() {
     DatabaseFactory(environment.config)
     // Auto-create schema in development environments (safe idempotent call)
     transaction {
-        SchemaUtils.create(
+        SchemaUtils.createMissingTablesAndColumns(
             ProductsApproved,
             ProductsUnapproved,
             Orders,

@@ -41,7 +41,7 @@ object Orders : UUIDTable("orders") {
     val createdAt = long("created_at") // Using long for milliseconds since epoch
     val productQuantity = integer("product_quantity")
     val userMobile = varchar("user_mobile", 20)
-    val userName = varchar("user_name", 255)
+    val userName = varchar("user_name", 255).default("")
     val totalAmount = double("total_amount")
 }
 
