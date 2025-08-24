@@ -2,6 +2,11 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /workspace
 
+# Install JDK 11 to satisfy Gradle toolchains that require Java 11
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openjdk-11-jdk-headless \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy sources
 COPY . .
 
