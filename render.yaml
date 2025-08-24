@@ -9,14 +9,17 @@ services:
       - key: JAVA_VERSION
         value: 17
       - key: DATABASE_URL
-        fromDatabase: capgold-db
-        property: connectionString
+        fromDatabase:
+          name: capgold-db
+          property: connectionString
       - key: DB_USER
-        fromDatabase: capgold-db
-        property: user
+        fromDatabase:
+          name: capgold-db
+          property: user
       - key: DB_PASSWORD
-        fromDatabase: capgold-db
-        property: password
+        fromDatabase:
+          name: capgold-db
+          property: password
       - key: JWT_SECRET
         sync: false
       - key: APP_BASE_URL
