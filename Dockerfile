@@ -2,13 +2,11 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /workspace
 
-# Cache Gradle dependencies
-COPY gradlew ./
-COPY gradle ./gradle
-RUN chmod +x ./gradlew
-
 # Copy sources
 COPY . .
+
+# Ensure Gradle wrapper is executable and has LF line endings
+RUN chmod +x ./gradlew && sed -i 's/\r$//' ./gradlew
 
 # Build only the server distribution
 RUN ./gradlew --no-daemon :server:installDist
