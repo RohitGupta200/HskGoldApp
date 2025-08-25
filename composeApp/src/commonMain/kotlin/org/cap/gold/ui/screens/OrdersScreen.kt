@@ -70,6 +70,7 @@ fun OrdersScreenContent(
     val tabs = listOf("Active", "Past")
     
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text("My Orders") },
@@ -160,159 +161,46 @@ fun OrderItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    // Simplified list row for regular users
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
+        // Left: product image placeholder (kept blank for now)
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Order ID and Status
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Order #${order.orderNumber}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                // Status Chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            when (order.status) {
-                                OrderStatus.PENDING -> Color(0xFFFFF3E0)
-                                OrderStatus.CONFIRMED -> Color(0xFFE8F5E9)
-                                OrderStatus.CANCELLED -> Color(0xFFFFEBEE)
-                                OrderStatus.SHIPPED -> Color(0xFFE3F2FD)
-                                OrderStatus.DELIVERED -> Color(0xFFEDE7F6)
-                            }
-                        )
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = when (order.status) {
-                                OrderStatus.PENDING -> Icons.Default.Pending
-                                OrderStatus.CONFIRMED -> Icons.Default.CheckCircle
-                                OrderStatus.CANCELLED -> Icons.Default.Cancel
-                                OrderStatus.SHIPPED -> Icons.AutoMirrored.Filled.ArrowForward
-                                OrderStatus.DELIVERED -> Icons.Default.DoneAll
-                            },
-                            contentDescription = null,
-                            tint = when (order.status) {
-                                OrderStatus.PENDING -> Color(0xFFFFA000)
-                                OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
-                                OrderStatus.CANCELLED -> Color(0xFFF44336)
-                                OrderStatus.SHIPPED -> Color(0xFF1E88E5)
-                                OrderStatus.DELIVERED -> Color(0xFF5E35B1)
-                            },
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = order.status.name.lowercase().replaceFirstChar { it.uppercase() },
-                            color = when (order.status) {
-                                OrderStatus.PENDING -> Color(0xFFFFA000)
-                                OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
-                                OrderStatus.CANCELLED -> Color(0xFFF44336)
-                                OrderStatus.SHIPPED -> Color(0xFF1E88E5)
-                                OrderStatus.DELIVERED -> Color(0xFF5E35B1)
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Product Info
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Product Image
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                // Product Details
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = order.productName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Text(
-                        text = "Qty: ${order.quantity}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    Text(
-                        text = "₹${formatAmount(order.totalAmount)}",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Order Date and View Details
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = order.formattedDate,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                
-                Text(
-                    text = "View Details",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+                .size(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFEDEDED))
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Middle: name and quantity
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = order.productName,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = if (order.quantity == 1) "1 item" else "${order.quantity} items",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
+
+        // Right: total amount
+        Text(
+            text = "₹ ${formatAmount(order.totalAmount)}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 

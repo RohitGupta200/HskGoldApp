@@ -4,6 +4,7 @@ import org.cap.gold.models.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.statements.api.ExposedBlob
 import java.util.*
 
 class ProductRepository {
@@ -11,6 +12,8 @@ class ProductRepository {
     // Create
     suspend fun createApprovedProduct(product: ApprovedProduct): ApprovedProduct = transaction {
         val id = ProductsApproved.insertAndGetId {
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -23,6 +26,8 @@ class ProductRepository {
     
     suspend fun createUnapprovedProduct(product: UnapprovedProduct): UnapprovedProduct = transaction {
         val id = ProductsUnapproved.insertAndGetId {
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -38,6 +43,8 @@ class ProductRepository {
     suspend fun insertApprovedWithId(id: UUID, product: ApprovedProduct): ApprovedProduct = transaction {
         ProductsApproved.insert {
             it[ProductsApproved.id] = id
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -53,6 +60,8 @@ class ProductRepository {
     suspend fun insertUnapprovedWithId(id: UUID, product: UnapprovedProduct): UnapprovedProduct = transaction {
         ProductsUnapproved.insert {
             it[ProductsUnapproved.id] = id
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -77,6 +86,8 @@ class ProductRepository {
             
             // Add to approved
             val id = ProductsApproved.insertAndGetId {
+                it[name] = product.name
+                it[description] = product.description
                 it[price] = product.price
                 it[weight] = product.weight
                 it[dimension] = product.dimension
@@ -119,6 +130,8 @@ class ProductRepository {
         if (existing == null) {
             ProductsApproved.insert {
                 it[ProductsApproved.id] = id
+                it[name] = product.name
+                it[description] = product.description
                 it[price] = product.price
                 it[weight] = product.weight
                 it[dimension] = product.dimension
@@ -130,6 +143,8 @@ class ProductRepository {
             }
         } else {
             ProductsApproved.update({ ProductsApproved.id eq id }) {
+                it[name] = product.name
+                it[description] = product.description
                 it[price] = product.price
                 it[weight] = product.weight
                 it[dimension] = product.dimension
@@ -150,6 +165,8 @@ class ProductRepository {
         if (existing == null) {
             ProductsUnapproved.insert {
                 it[ProductsUnapproved.id] = id
+                it[name] = product.name
+                it[description] = product.description
                 it[price] = product.price
                 it[weight] = product.weight
                 it[dimension] = product.dimension
@@ -161,6 +178,8 @@ class ProductRepository {
             }
         } else {
             ProductsUnapproved.update({ ProductsUnapproved.id eq id }) {
+                it[name] = product.name
+                it[description] = product.description
                 it[price] = product.price
                 it[weight] = product.weight
                 it[dimension] = product.dimension
@@ -196,6 +215,8 @@ class ProductRepository {
                     approved != null -> approved.copy(id = productId, createdAt = approved.createdAt, updatedAt = approved.updatedAt)
                     unapproved != null -> ApprovedProduct(
                         id = productId,
+                        name = unapproved.name,
+                        description = unapproved.description,
                         price = unapproved.price,
                         weight = unapproved.weight,
                         dimension = unapproved.dimension,
@@ -212,6 +233,8 @@ class ProductRepository {
                     unapproved != null -> unapproved.copy(id = productId, createdAt = unapproved.createdAt, updatedAt = unapproved.updatedAt)
                     approved != null -> UnapprovedProduct(
                         id = productId,
+                        name = approved.name,
+                        description = approved.description,
                         price = approved.price,
                         weight = approved.weight,
                         dimension = approved.dimension,
@@ -227,6 +250,8 @@ class ProductRepository {
                 approvedToInsert?.let { ap ->
                     ProductsApproved.insert {
                         it[ProductsApproved.id] = productId
+                        it[name] = ap.name
+                        it[description] = ap.description
                         it[price] = ap.price
                         it[weight] = ap.weight
                         it[dimension] = ap.dimension
@@ -241,6 +266,8 @@ class ProductRepository {
                 unapprovedToInsert?.let { up ->
                     ProductsUnapproved.insert {
                         it[ProductsUnapproved.id] = productId
+                        it[name] = up.name
+                        it[description] = up.description
                         it[price] = up.price
                         it[weight] = up.weight
                         it[dimension] = up.dimension
@@ -257,6 +284,8 @@ class ProductRepository {
                     if (!exists) {
                         ProductsApproved.insert {
                             it[ProductsApproved.id] = productId
+                            it[name] = ap.name
+                            it[description] = ap.description
                             it[price] = ap.price
                             it[weight] = ap.weight
                             it[dimension] = ap.dimension
@@ -268,6 +297,8 @@ class ProductRepository {
                         }
                     } else {
                         ProductsApproved.update({ ProductsApproved.id eq productId }) {
+                            it[name] = ap.name
+                            it[description] = ap.description
                             it[price] = ap.price
                             it[weight] = ap.weight
                             it[dimension] = ap.dimension
@@ -283,6 +314,8 @@ class ProductRepository {
                     if (!exists) {
                         ProductsUnapproved.insert {
                             it[ProductsUnapproved.id] = productId
+                            it[name] = up.name
+                            it[description] = up.description
                             it[price] = up.price
                             it[weight] = up.weight
                             it[dimension] = up.dimension
@@ -294,6 +327,8 @@ class ProductRepository {
                         }
                     } else {
                         ProductsUnapproved.update({ ProductsUnapproved.id eq productId }) {
+                            it[name] = up.name
+                            it[description] = up.description
                             it[price] = up.price
                             it[weight] = up.weight
                             it[dimension] = up.dimension
@@ -312,6 +347,8 @@ class ProductRepository {
     // Update
     suspend fun updateApprovedProduct(id: UUID, product: ApprovedProduct): Boolean = transaction {
         ProductsApproved.update({ ProductsApproved.id eq id }) {
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -324,6 +361,8 @@ class ProductRepository {
     
     suspend fun updateUnapprovedProduct(id: UUID, product: UnapprovedProduct): Boolean = transaction {
         ProductsUnapproved.update({ ProductsUnapproved.id eq id }) {
+            it[name] = product.name
+            it[description] = product.description
             it[price] = product.price
             it[weight] = product.weight
             it[dimension] = product.dimension
@@ -354,6 +393,8 @@ class ProductRepository {
             // Add to approved
             ProductsApproved.insert {
                 it[id] = unapproved.id
+                it[name] = unapproved.name
+                it[description] = unapproved.description
                 it[price] = unapproved.price
                 it[weight] = unapproved.weight
                 it[dimension] = unapproved.dimension
@@ -366,5 +407,29 @@ class ProductRepository {
         }
         
         return true
+    }
+
+    // ===== Image helpers =====
+    suspend fun upsertImage(productId: UUID, bytes: ByteArray) = transaction {
+        val exists = ProductImages.select { ProductImages.productId eq productId }.singleOrNull()
+        if (exists == null) {
+            ProductImages.insert {
+                it[ProductImages.productId] = productId
+                it[image] = ExposedBlob(bytes)
+                it[createdAt] = java.time.LocalDateTime.now()
+                it[updatedAt] = java.time.LocalDateTime.now()
+            }
+        } else {
+            ProductImages.update({ ProductImages.productId eq productId }) {
+                it[image] = ExposedBlob(bytes)
+                it[updatedAt] = java.time.LocalDateTime.now()
+            }
+        }
+    }
+
+    suspend fun getImage(productId: UUID): ByteArray? = transaction {
+        ProductImages.select { ProductImages.productId eq productId }
+            .mapNotNull { row -> row[ProductImages.image]?.bytes }
+            .singleOrNull()
     }
 }

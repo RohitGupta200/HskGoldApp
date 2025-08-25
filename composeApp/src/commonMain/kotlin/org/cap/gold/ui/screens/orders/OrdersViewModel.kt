@@ -38,11 +38,11 @@ class OrdersViewModel : KoinComponent {
                 when (val resp = orderRepository.getUserOrders()) {
                     is org.cap.gold.data.network.NetworkResponse.Success -> {
                         val orders = resp.data.data.map { order ->
-                            val dateMillis = parseDateMillis(order.createdAt)
+                            val dateMillis = order.createdAt
                             OrderUiModel(
                                 id = order.id,
                                 orderNumber = order.id, // fallback
-                                productName = order.productId, // fallback until product lookup
+                                productName = order.productName.ifBlank { order.productId },
                                 quantity = order.quantity,
                                 totalAmount = order.totalPrice,
                                 status = order.status,

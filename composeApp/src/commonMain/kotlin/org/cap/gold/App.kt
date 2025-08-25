@@ -6,13 +6,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.core.screen.ScreenKey
 import kotlinx.coroutines.launch
 import org.cap.gold.auth.AuthService
+import org.cap.gold.auth.TokenManager
 import org.cap.gold.di.initKoin
 import org.cap.gold.ui.screens.HomeScreen
 import org.cap.gold.ui.screens.LoginScreen
 import org.cap.gold.ui.theme.AppTheme
 import org.koin.compose.koinInject
+import org.cap.gold.ui.navigation.ProvideAppNavigator
 
 @Composable
 fun App() {
@@ -46,13 +49,24 @@ fun App() {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
             } else if (isAuthenticated) {
-                // Show main app content when authenticated
-                HomeScreen(
-                    user = authState!!,
-                    onLogout = {
-                        coroutineScope.launch {
-                            authService.signOut()
-                            isAuthenticated = false
+                // Show main app content when authenticated inside a Voyager Navigator
+                cafe.adriel.voyager.navigator.Navigator(
+                    object : cafe.adriel.voyager.core.screen.Screen {
+                        override val key: ScreenKey = "home_screen"
+                        @Composable
+                        override fun Content() {
+                            ProvideAppNavigator {
+                                HomeScreen(
+                                    user = authState!!,
+                                    onLogout = {
+                                        coroutineScope.launch {
+                                            authService.signOut()
+                                            isAuthenticated = false
+
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 )

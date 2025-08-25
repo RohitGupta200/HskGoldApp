@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import kotlinx.coroutines.delay
@@ -31,8 +30,9 @@ import kotlinx.coroutines.launch
 import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.ui.screens.orders.OrderUiModel
 import org.cap.gold.ui.screens.orders.OrdersUiState
-import org.cap.gold.ui.screens.order.OrderDetailScreen
-import org.cap.gold.ui.screens.order.OrderDetailViewModel
+import org.cap.gold.ui.navigation.AppRoute
+import org.cap.gold.ui.navigation.LocalAppNavigator
+import org.cap.gold.ui.navigation.OrderDetailVoyagerScreen
 import org.cap.gold.util.formatAmount
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -45,6 +45,7 @@ fun AdminOrdersScreen(
     onBack: () -> Unit = { navigator?.pop() },
     modifier: Modifier = Modifier
 ) {
+    val appNavigator = LocalAppNavigator.current
     // Default wrapper now wires the ViewModel automatically
     val vm: AdminOrdersViewModel = koinInject()
     val state by vm.uiState.collectAsState()
@@ -57,19 +58,11 @@ fun AdminOrdersScreen(
         onRefresh = { vm.loadOrders(reset = true) },
         onStatusChange = { id, st -> vm.updateOrderStatus(id, st) },
         onOrderClick = { orderId ->
-            navigator?.push(object : Screen {
-                @Composable
-                override fun Content() {
-                    val viewModel: OrderDetailViewModel = koinInject(
-                        parameters = { parametersOf(orderId) }
-                    )
-                    OrderDetailScreen(
-                        viewModel = viewModel,
-                        orderId = orderId,
-                        onBack = { navigator.pop() }
-                    )
-                }
-            })
+            if (appNavigator != null) {
+                appNavigator.push(AppRoute.OrderDetail(orderId))
+            } else {
+                navigator?.push(OrderDetailVoyagerScreen(orderId))
+            }
         },
         onSearch = { q -> vm.search(q) },
         onLoadMore = { vm.loadMore() },
@@ -102,6 +95,7 @@ fun AdminOrdersScreenContent(
     }
     
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text("All Orders") },
@@ -137,7 +131,7 @@ fun AdminOrdersScreenContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                placeholder = { Text("Search by order, user, product…") },
+                placeholder = { Text("Search orders") },
                 singleLine = true
             )
 
@@ -283,7 +277,7 @@ fun AdminOrderItem(
             Text(
                 text = order.customerName.ifBlank { "Customer" },
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             
@@ -301,12 +295,19 @@ fun AdminOrderItem(
                     color = MaterialTheme.colorScheme.primary
                 )
                 
-                // Amount in green
+                // Amount color by status
+                val amountColor = when (order.status) {
+                    OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
+                    OrderStatus.PENDING -> Color(0xFFFF6D00)
+                    OrderStatus.CANCELLED -> Color(0xFFF44336)
+                    OrderStatus.SHIPPED -> Color(0xFF1E88E5)
+                    OrderStatus.DELIVERED -> Color(0xFF2E7D32)
+                }
                 Text(
                     text = "₹ ${formatAmount(order.totalAmount)}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF4CAF50) // Green color
+                    color = amountColor
                 )
             }
         }

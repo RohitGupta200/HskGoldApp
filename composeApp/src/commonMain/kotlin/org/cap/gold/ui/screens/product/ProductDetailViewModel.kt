@@ -3,6 +3,10 @@ package org.cap.gold.ui.screens.product
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,7 +14,9 @@ import org.cap.gold.data.model.Order
 import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.data.model.Product
 import org.cap.gold.data.remote.ProductApiService
+import kotlin.io.encoding.ExperimentalEncodingApi
 
+@OptIn(ExperimentalEncodingApi::class)
 class ProductDetailViewModel(
     private val productApiService: ProductApiService,
     private val productId: String,
@@ -25,6 +31,11 @@ class ProductDetailViewModel(
     var orderSuccess by mutableStateOf(false)
     var showOrderDialog by mutableStateOf(false)
     var quantity by mutableStateOf(1)
+    // Image selection state (admin edit/create)
+    var selectedImageBytes by mutableStateOf<ByteArray?>(null)
+        private set
+    var selectedImageFileName by mutableStateOf<String?>(null)
+        private set
     val isCreateMode: Boolean = productId == "new"
     
     init {
@@ -46,6 +57,17 @@ class ProductDetailViewModel(
             loadProduct()
         }
     }
+    fun onImageSelected(bytes: ByteArray, fileName: String) {
+        selectedImageBytes = bytes
+        selectedImageFileName = fileName
+        // also preview in current product as data URI base64
+        product = product?.copy(
+            imageBase64 = bytes.encodeBase64()
+        )
+    }
+    
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun ByteArray.encodeBase64(): String = kotlin.io.encoding.Base64.encode(this)
     
     fun loadProduct() {
         isLoading = true
@@ -59,11 +81,12 @@ class ProductDetailViewModel(
                         both == null -> null
                         both.approved != null -> Product(
                             id = productId,
-                            name = "", // name not part of payload yet
+                            name = both.approved.name,
                             price = both.approved.price,
                             imageUrl = "",
+                            imageBase64 = both.approved.imageBase64,
                             category = both.approved.category,
-                            description = "",
+                            description = both.approved.description,
                             weight = both.approved.weight,
                             purity = both.approved.purity,
                             dimension = both.approved.dimension,
@@ -71,11 +94,12 @@ class ProductDetailViewModel(
                         )
                         both.unapproved != null -> Product(
                             id = productId,
-                            name = "",
+                            name = both.unapproved.name,
                             price = both.unapproved.price,
                             imageUrl = "",
+                            imageBase64 = both.unapproved.imageBase64,
                             category = both.unapproved.category,
-                            description = "",
+                            description = both.unapproved.description,
                             weight = both.unapproved.weight,
                             purity = both.unapproved.purity,
                             dimension = both.unapproved.dimension,
@@ -87,6 +111,11 @@ class ProductDetailViewModel(
                     productApiService.getProductById(productId)
                 } else {
                     productApiService.getUnapprovedProductById(productId)
+                }
+                // Debug: log image info received from API
+                runCatching {
+                    val len = product?.imageBase64?.length ?: 0
+                    println("DEBUG ProductDetail.loadProduct: id=$productId base64Len=$len imageUrl='${product?.imageUrl}' isAdmin=$isAdmin isApprovedUser=$isApprovedUser")
                 }
                 
                 if (product == null) {
@@ -112,7 +141,9 @@ class ProductDetailViewModel(
                     val newId = productApiService.createBothVariants(
                         id = null,
                         approved = updatedProduct,
-                        unapproved = null
+                        unapproved = null,
+                        imageBytes = selectedImageBytes,
+                        imageFileName = selectedImageFileName
                     )
                     // Load created product (approved preferred)
                     product = productApiService.getProductById(newId)
@@ -121,12 +152,22 @@ class ProductDetailViewModel(
                     productApiService.updateBothVariants(
                         id = productId,
                         approved = updatedProduct,
-                        unapproved = null
+                        unapproved = null,
+                        imageBytes = selectedImageBytes,
+                        imageFileName = selectedImageFileName
                     )
                     // Refresh current product
                     product = productApiService.getProductById(productId)
                 }
+                // Debug: log image info after create/update
+                runCatching {
+                    val len = product?.imageBase64?.length ?: 0
+                    println("DEBUG ProductDetail.updateProduct: id=${product?.id} base64Len=$len imageUrl='${product?.imageUrl}'")
+                }
                 onSuccess()
+                // Clear selection after successful save
+                selectedImageBytes = null
+                selectedImageFileName = null
             } catch (e: Exception) {
                 error = "Failed to update product: ${e.message}"
             } finally {
@@ -224,18 +265,21 @@ class ProductDetailViewModel(
                     val newId = productApiService.createBothVariants(
                         id = null,
                         approved = approved,
-                        unapproved = unapproved
+                        unapproved = unapproved,
+                        imageBytes = selectedImageBytes,
+                        imageFileName = selectedImageFileName
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(newId) }.getOrNull()
                     product = when {
                         both?.approved != null -> Product(
                             id = newId,
-                            name = "",
+                            name = both.approved.name,
                             price = both.approved.price,
                             imageUrl = "",
+                            imageBase64 = both.approved.imageBase64,
                             category = both.approved.category,
-                            description = "",
+                            description = both.approved.description,
                             weight = both.approved.weight,
                             purity = both.approved.purity,
                             dimension = both.approved.dimension,
@@ -243,11 +287,12 @@ class ProductDetailViewModel(
                         )
                         both?.unapproved != null -> Product(
                             id = newId,
-                            name = "",
+                            name = both.unapproved.name,
                             price = both.unapproved.price,
                             imageUrl = "",
+                            imageBase64 = both.unapproved.imageBase64,
                             category = both.unapproved.category,
-                            description = "",
+                            description = both.unapproved.description,
                             weight = both.unapproved.weight,
                             purity = both.unapproved.purity,
                             dimension = both.unapproved.dimension,
@@ -259,18 +304,21 @@ class ProductDetailViewModel(
                     productApiService.updateBothVariants(
                         id = productId,
                         approved = approved,
-                        unapproved = unapproved
+                        unapproved = unapproved,
+                        imageBytes = selectedImageBytes,
+                        imageFileName = selectedImageFileName
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
                     product = when {
                         both?.approved != null -> Product(
                             id = productId,
-                            name = "",
+                            name = both.approved.name,
                             price = both.approved.price,
                             imageUrl = "",
+                            imageBase64 = both.approved.imageBase64,
                             category = both.approved.category,
-                            description = "",
+                            description = both.approved.description,
                             weight = both.approved.weight,
                             purity = both.approved.purity,
                             dimension = both.approved.dimension,
@@ -278,11 +326,12 @@ class ProductDetailViewModel(
                         )
                         both?.unapproved != null -> Product(
                             id = productId,
-                            name = "",
+                            name = both.unapproved.name,
                             price = both.unapproved.price,
                             imageUrl = "",
+                            imageBase64 = both.unapproved.imageBase64,
                             category = both.unapproved.category,
-                            description = "",
+                            description = both.unapproved.description,
                             weight = both.unapproved.weight,
                             purity = both.unapproved.purity,
                             dimension = both.unapproved.dimension,
@@ -292,6 +341,8 @@ class ProductDetailViewModel(
                     }
                 }
                 onSuccess()
+                selectedImageBytes = null
+                selectedImageFileName = null
             } catch (e: Exception) {
                 error = "Failed to save product: ${e.message}"
             } finally {

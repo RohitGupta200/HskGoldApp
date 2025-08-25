@@ -31,25 +31,40 @@ class AppOrderRepositoryImpl : AppOrderRepository, KoinComponent {
         statusGroup: OrderStatusGroup?
     ): NetworkResponse<PaginatedResponse<Order>> {
         return try {
-            val response = client.get("/orders/me") {
+            val response = client.get("/api/orders") {
+                // Server may ignore pagination currently; still send for future compatibility
                 parameter("page", page)
                 parameter("pageSize", pageSize)
                 status?.let { parameter("status", it.name) }
                 statusGroup?.let { parameter("statusGroup", it.name) }
             }
-            
+
             when (response.status) {
                 HttpStatusCode.OK -> {
-                    val paginatedResponse = response.body<PaginatedResponseDto<Order>>()
-                    NetworkResponse.Success(
-                        PaginatedResponse(
-                            data = paginatedResponse.data,
-                            total = paginatedResponse.total,
-                            page = paginatedResponse.page,
-                            pageSize = paginatedResponse.pageSize
+                    try {
+                        val paginatedResponse = response.body<PaginatedResponseDto<Order>>()
+                        NetworkResponse.Success(
+                            PaginatedResponse(
+                                data = paginatedResponse.data,
+                                total = paginatedResponse.total,
+                                page = paginatedResponse.page,
+                                pageSize = paginatedResponse.pageSize
+                            )
                         )
-                    )
+                    } catch (e: JsonConvertException) {
+                        val list = response.body<List<Order>>()
+                        NetworkResponse.Success(
+                            PaginatedResponse(
+                                data = list,
+                                total = list.size.toLong(),
+                                page = page,
+                                pageSize = pageSize
+                            )
+                        )
+                    }
                 }
+                HttpStatusCode.Unauthorized -> NetworkResponse.Error("Unauthorized")
+                HttpStatusCode.Forbidden -> NetworkResponse.Error("Access denied")
                 else -> NetworkResponse.Error("Failed to fetch orders")
             }
         } catch (e: Exception) {

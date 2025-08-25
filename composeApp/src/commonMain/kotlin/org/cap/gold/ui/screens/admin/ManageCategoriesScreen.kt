@@ -34,6 +34,7 @@ fun ManageCategoriesScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text("Manage Categories") },

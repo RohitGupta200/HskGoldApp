@@ -1,7 +1,9 @@
 package org.cap.gold.ui.screens.product
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,8 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +34,199 @@ import org.cap.gold.ui.components.LoadingIndicator
 import org.cap.gold.data.repository.CategoryRepository
 import org.cap.gold.data.network.NetworkResponse
 import org.koin.compose.koinInject
+import org.cap.gold.platform.rememberImagePicker
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
+
+// Variant type for admin editing
+enum class VariantType { APPROVED, UNAPPROVED }
+
+@Composable
+private fun EditableHeadline(
+    value: String,
+    placeholder: String,
+    onChange: (String) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            textStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface),
+            modifier = Modifier.fillMaxWidth()
+        ) { inner ->
+            if (value.isEmpty()) {
+                Text(placeholder, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            inner()
+        }
+    }
+}
+
+@Composable
+private fun EditableMultiline(
+    value: String,
+    placeholder: String,
+    onChange: (String) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+            modifier = Modifier.fillMaxWidth()
+        ) { inner ->
+            if (value.isEmpty()) {
+                Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            inner()
+        }
+    }
+}
+
+@Composable
+private fun EditableDetailRow(
+    label: String,
+    value: String,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    onChange: (String) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(modifier = Modifier.widthIn(min = 120.dp)) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onChange,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                ) { inner ->
+                    if (value.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                    }
+                    inner()
+                }
+            }
+        }
+        DottedDivider()
+    }
+}
+
+@Composable
+private fun EditableDropdownRow(
+    label: String,
+    valueText: String,
+    options: List<String>,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clickable { expanded = true },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(valueText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { opt ->
+                DropdownMenuItem(
+                    text = { Text(opt) },
+                    onClick = {
+                        expanded = false
+                        onSelected(opt)
+                    }
+                )
+            }
+        }
+        DottedDivider()
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryDropdown(
+    categories: List<String>,
+    selected: String,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Category") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            categories.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category) },
+                    onClick = {
+                        onSelected(category)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuantitySelector(
+    quantity: Int,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    maxQuantity: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Quantity")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onDecrement, enabled = quantity > 1) {
+                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+            }
+            Text(
+                text = quantity.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.width(32.dp),
+                textAlign = TextAlign.Center
+            )
+            IconButton(onClick = onIncrement, enabled = quantity < maxQuantity) {
+                Icon(Icons.Default.Add, contentDescription = "Increase")
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,10 +253,12 @@ fun ProductDetailScreen(
     val error = viewModel.error
     val orderSuccess = viewModel.orderSuccess
     
-    // Show loading indicator
+    // Show loading indicator (respect system bars)
     if (isLoading && product == null) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
             contentAlignment = Alignment.Center
         ) {
             LoadingIndicator()
@@ -83,16 +285,17 @@ fun ProductDetailScreen(
     
     // Main content
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
-                title = { Text(product?.name ?: "Product Details") },
+                title = { Text(if (viewModel.isAdmin) (product?.name ?: "Product Details") else "Item Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (viewModel.isAdmin) {
+                    if (viewModel.isAdmin && !viewModel.isCreateMode) {
                         IconButton(onClick = { viewModel.deleteProduct(onProductDeleted) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
@@ -118,7 +321,8 @@ fun ProductDetailScreen(
                     onPlaceOrder = { phone ->
                         val customerName = user.name ?: user.displayName ?: ""
                         viewModel.placeOrder(phone, customerName) { onOrderSuccess(it.id) }
-                    }
+                    },
+                    onProductDeleted = onProductDeleted
                 )
             } else {
                 ProductContent(
@@ -133,7 +337,8 @@ fun ProductDetailScreen(
                     onPlaceOrder = { phone ->
                         val customerName = user.name ?: user.displayName ?: ""
                         viewModel.placeOrder(phone, customerName) { onOrderSuccess(it.id) }
-                    }
+                    },
+                    onProductDeleted = { }
                 )
             }
         } ?: run {
@@ -157,10 +362,13 @@ private fun ProductContent(
     modifier: Modifier = Modifier,
     viewModel: ProductDetailViewModel,
     user: User,
-    onPlaceOrder: (String) -> Unit
+    onPlaceOrder: (String) -> Unit,
+    onProductDeleted: () -> Unit
 ) {
-    var isEditMode by remember { mutableStateOf(false) }
-    var editedProduct by remember { mutableStateOf(product) }
+    // Admin can edit inline without toggling edit mode
+    var activeType by remember { mutableStateOf(VariantType.APPROVED) }
+    var approvedDraft by remember { mutableStateOf(product) }
+    var unapprovedDraft by remember { mutableStateOf(product) }
     val quantity = viewModel.quantity
 
     Column(
@@ -170,14 +378,14 @@ private fun ProductContent(
             .padding(16.dp)
     ) {
         // Product Image
-        val painter = rememberAsyncImagePainter(
-            model = product.imageUrl.ifEmpty { null },
-            error = rememberAsyncImagePainter(
-                model = null,
-                contentScale = ContentScale.Crop,
-                error = null
-            )
-        )
+        @OptIn(ExperimentalEncodingApi::class)
+        val base64 = product.imageBase64
+        val model: Any? = when {
+            !base64.isNullOrEmpty() -> runCatching { Base64.decode(base64) }.getOrNull()
+            product.imageUrl.isNotEmpty() -> product.imageUrl
+            else -> null
+        }
+        val painter = rememberAsyncImagePainter(model = model)
         
         Box(
             modifier = Modifier
@@ -194,10 +402,13 @@ private fun ProductContent(
                 modifier = Modifier.fillMaxSize()
             )
             
-            if (isAdmin && isEditMode) {
-                // TODO: Add image upload functionality
+            if (isAdmin) {
+                val picker = rememberImagePicker(
+                    onImagePicked = { bytes, fileName -> viewModel.onImageSelected(bytes, fileName) },
+                    onError = { e -> viewModel.error = e.message ?: "Failed to pick image" }
+                )
                 Button(
-                    onClick = { /* TODO: Implement image upload */ },
+                    onClick = { picker.pickImage() },
                     modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
                     Icon(Icons.Default.Edit, "Change Image")
@@ -210,177 +421,228 @@ private fun ProductContent(
         Spacer(modifier = Modifier.height(16.dp))
         
         // Product Details
-        if (isAdmin && isEditMode) {
-            // Editable fields for admin mirroring read-only layout
-            OutlinedTextField(
-                value = editedProduct.name,
-                onValueChange = { editedProduct = editedProduct.copy(name = it) },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth()
+        if (isAdmin) {
+            // Name and Description just below the image (borderless)
+            val draft = if (activeType == VariantType.APPROVED) approvedDraft else unapprovedDraft
+            Spacer(modifier = Modifier.height(12.dp))
+            EditableHeadline(
+                value = draft.name,
+                placeholder = "Add item name",
+                onChange = {
+                    approvedDraft = approvedDraft.copy(name = it)
+                    unapprovedDraft = unapprovedDraft.copy(name = it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+            EditableMultiline(
+                value = draft.description,
+                placeholder = "Enter item description",
+                onChange = {
+                    approvedDraft = approvedDraft.copy(description = it)
+                    unapprovedDraft = unapprovedDraft.copy(description = it)
+                }
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            DottedDivider()
+            Spacer(Modifier.height(8.dp))
+
+            // Type dropdown to switch editing variant (flat style)
+            EditableDropdownRow(
+                label = "Type",
+                valueText = if (activeType == VariantType.APPROVED) "Approved" else "Unapproved",
+                options = listOf("Approved", "Unapproved"),
+                onSelected = { sel ->
+                    activeType =
+                        if (sel == "Approved") VariantType.APPROVED else VariantType.UNAPPROVED
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = editedProduct.imageUrl,
-                onValueChange = { editedProduct = editedProduct.copy(imageUrl = it) },
-                label = { Text("Image URL") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.price.toString(),
-                onValueChange = { v ->
+            // Editable numeric/text detail fields as label : value
+            EditableDetailRow(
+                label = "Price",
+                value = draft.price.takeIf { !it.isNaN() }?.toString() ?: "",
+                placeholder = "Add price",
+                keyboardType = KeyboardType.Number,
+                onChange = { v ->
                     val d = v.toDoubleOrNull() ?: 0.0
-                    editedProduct = editedProduct.copy(price = d)
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(price = d) else unapprovedDraft = draft.copy(price = d)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            EditableDetailRow(
+                label = "Purity",
+                value = draft.purity,
+                placeholder = "Add purity",
+                onChange = {
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(purity = it) else unapprovedDraft = draft.copy(purity = it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            EditableDetailRow(
+                label = "Weight",
+                value = draft.weight.takeIf { !it.isNaN() }?.toString() ?: "",
+                placeholder = "Add weight",
+                keyboardType = KeyboardType.Number,
+                onChange = { v ->
+                    val d = v.toDoubleOrNull() ?: 0.0
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(weight = d) else unapprovedDraft = draft.copy(weight = d)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            EditableDetailRow(
+                label = "Dimensions",
+                value = draft.dimension,
+                placeholder = "Add dimensions",
+                onChange = {
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(dimension = it) else unapprovedDraft = draft.copy(dimension = it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            EditableDetailRow(
+                label = "Max quantity",
+                value = draft.maxQuantity.toString(),
+                placeholder = "Add max quantity",
+                keyboardType = KeyboardType.Number,
+                onChange = { v ->
+                    val mq = v.toIntOrNull() ?: 1
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(maxQuantity = mq) else unapprovedDraft =
+                        draft.copy(maxQuantity = mq)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Category at last (flat dropdown)
+            EditableDropdownRow(
+                label = "Category",
+                valueText = draft.category.ifBlank { "Select" },
+                options = categories,
+                onSelected = { sel ->
+                    if (activeType == VariantType.APPROVED) approvedDraft =
+                        draft.copy(category = sel) else unapprovedDraft = draft.copy(category = sel)
+                }
+            )
+
+            // Bottom actions styled like design: Delete (light) on top, Save primary below
+            Spacer(modifier = Modifier.height(24.dp))
+            if (!viewModel.isCreateMode) {
+                Button(
+                    onClick = { viewModel.deleteProduct(onProductDeleted) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Delete item", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            Button(
+                onClick = {
+                    val approvedToSend = approvedDraft
+                    val unapprovedToSend = unapprovedDraft
+                    viewModel.upsertBothFromUi(
+                        approved = approvedToSend,
+                        unapproved = unapprovedToSend,
+                        onSuccess = { /* refresh handled in VM */ }
+                    )
                 },
-                label = { Text("Price (₹)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.weight.toString(),
-                onValueChange = { v ->
-                    editedProduct = editedProduct.copy(weight = v.toDoubleOrNull() ?: 0.0)
-                },
-                label = { Text("Weight (g)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.purity,
-                onValueChange = { editedProduct = editedProduct.copy(purity = it) },
-                label = { Text("Purity") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.dimension,
-                onValueChange = { editedProduct = editedProduct.copy(dimension = it) },
-                label = { Text("Dimension") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.maxQuantity.toString(),
-                onValueChange = { v ->
-                    editedProduct = editedProduct.copy(maxQuantity = v.toIntOrNull() ?: 1)
-                },
-                label = { Text("Max Quantity") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Category dropdown (fetched from API)
-            CategoryDropdown(
-                categories = categories,
-                selected = editedProduct.category,
-                onSelected = { editedProduct = editedProduct.copy(category = it) }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = editedProduct.description,
-                onValueChange = { editedProduct = editedProduct.copy(description = it) },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-
-            // Save/Cancel buttons
-            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                    .height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White
+                )
             ) {
-                TextButton(onClick = { isEditMode = false; editedProduct = product }) {
-                    Text("Cancel")
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = {
-                        onProductUpdate(editedProduct)
-                        isEditMode = false
-                    }
-                ) {
-                    Text("Save Changes")
-                }
+                Text(
+                    if (viewModel.isCreateMode) "Add Item" else "Save",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
+
         } else {
-            // Read-only view
+
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = product.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Price
-            Text(
-                text = "₹${product.price}",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Details
-            ProductDetailRow("Weight", "${product.weight}g")
-            ProductDetailRow("Purity", "${product.purity}K")
-            ProductDetailRow("Dimension", product.dimension)
-            ProductDetailRow("Category", product.category)
-            ProductDetailRow("Max Quantity", product.maxQuantity.toString())
-            
-            // Description
             if (product.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = product.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(text = product.description)
+                Spacer(modifier = Modifier.height(12.dp))
             }
-            
-            // Admin actions
-            if (isAdmin) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Button(
-                    onClick = { isEditMode = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Edit, "Edit")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Product")
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Approve button (only for unapproved products)
-            }
+
+            // Price
+
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Details
+            Text(
+                text = "Details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            DottedDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            ProductDetailRow("Price", "₹${product.price}")
+            DottedDivider()
+            ProductDetailRow("Purity", product.purity)
+            DottedDivider()
+            ProductDetailRow("Weight", "${product.weight} grams")
+            DottedDivider()
+            ProductDetailRow("Dimensions", product.dimension)
+            DottedDivider()
+            ProductDetailRow("Category", product.category)
+            DottedDivider()
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+            // Admin actions removed; admin edits inline above
             
             // --- Order Section for non-admins ---
             if (!isAdmin) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                DottedDivider()
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Quantity Selector
                 QuantitySelector(
@@ -390,12 +652,21 @@ private fun ProductContent(
                     maxQuantity = product.maxQuantity
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+                DottedDivider()
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Place Order Button
                 Button(
                     onClick = { onPlaceOrder(user.phoneNumber) },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    ),
                     enabled = !viewModel.isLoading
                 ) {
                     if (viewModel.isLoading) {
@@ -408,196 +679,13 @@ private fun ProductContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun QuantitySelector(
-    quantity: Int,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
-    maxQuantity: Int
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text("Quantity:", style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDecrement, enabled = quantity > 1) {
-                Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Decrease quantity")
-            }
-            Text(quantity.toString(), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp))
-            IconButton(onClick = onIncrement, enabled = quantity < maxQuantity) {
-                Icon(Icons.Default.AddCircleOutline, contentDescription = "Increase quantity")
-            }
-        }
-    }
-    if (quantity >= maxQuantity) {
-        Text(
-            "Maximum quantity reached",
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.End
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminDualEditContent(
-    initial: Product?,
-    onSave: (approved: Product?, unapproved: Product?) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Draft states for both variants
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Approved, 1 = Unapproved
-    var approvedDraft by remember {
-        mutableStateOf(
-            initial ?: Product(
-                id = "",
-                name = "",
-                price = 0.0,
-                imageUrl = "",
-                category = "",
-                description = "",
-                weight = 0.0,
-                purity = "",
-                dimension = "",
-                maxQuantity = 1
-            )
-        )
-    }
-    var unapprovedDraft by remember { mutableStateOf(approvedDraft.copy()) }
-    var showSuccess by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        // Tabs
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Approved") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Unapproved") })
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Editor for selected variant
-        val onDraftChange: (Product) -> Unit = { p ->
-            if (selectedTab == 0) approvedDraft = p else unapprovedDraft = p
-        }
-        VariantEditor(
-            product = if (selectedTab == 0) approvedDraft else unapprovedDraft,
-            onChange = onDraftChange
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // Save actions
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Button(onClick = {
-                onSave(approvedDraft, unapprovedDraft)
-                showSuccess = true
-            }) {
-                Icon(Icons.Default.Save, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Save Both Variants")
-            }
-        }
-    }
-
-    if (showSuccess) {
-        SuccessDialog(
-            title = "Saved",
-            message = "Product variants saved successfully.",
-            onDismiss = { showSuccess = false }
-        )
-    }
-}
-
-@Composable
-private fun VariantEditor(
-    product: Product,
-    onChange: (Product) -> Unit
-) {
-    // Category options (placeholder list; replace with dynamic categories when available)
-    val categories = listOf("Ring", "Necklace", "Bracelet", "Earring", "Pendant")
-
-    OutlinedTextField(
-        value = product.name,
-        onValueChange = { onChange(product.copy(name = it)) },
-        label = { Text("Name") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    OutlinedTextField(
-        value = product.price.toString(),
-        onValueChange = { v ->
-            val d = v.toDoubleOrNull() ?: 0.0
-            onChange(product.copy(price = d))
-        },
-        label = { Text("Price (₹)") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    OutlinedTextField(
-        value = product.weight.toString(),
-        onValueChange = { v -> onChange(product.copy(weight = v.toDoubleOrNull() ?: 0.0)) },
-        label = { Text("Weight (g)") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    OutlinedTextField(
-        value = product.purity,
-        onValueChange = { onChange(product.copy(purity = it)) },
-        label = { Text("Purity") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    OutlinedTextField(
-        value = product.dimension,
-        onValueChange = { onChange(product.copy(dimension = it)) },
-        label = { Text("Dimension") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    OutlinedTextField(
-        value = product.maxQuantity.toString(),
-        onValueChange = { v -> onChange(product.copy(maxQuantity = v.toIntOrNull() ?: 1)) },
-        label = { Text("Max Quantity") },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    Spacer(Modifier.height(8.dp))
-
-    CategoryDropdown(
-        categories = categories,
-        selected = product.category,
-        onSelected = { onChange(product.copy(category = it)) }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CategoryDropdown(
-    categories: List<String>,
-    selected: String,
-    onSelected: (String) -> Unit
+private fun TypeDropdown(
+    selected: VariantType,
+    onSelected: (VariantType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -607,48 +695,113 @@ private fun CategoryDropdown(
         modifier = Modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = selected,
+            value = if (selected == VariantType.APPROVED) "Approved" else "Unapproved",
             onValueChange = {},
             readOnly = true,
-            label = { Text("Category") },
+            label = { Text("Type") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
+                .menuAnchor()
                 .fillMaxWidth()
         )
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            categories.forEach { category ->
-                DropdownMenuItem(
-                    text = { Text(category) },
-                    onClick = {
-                        onSelected(category)
-                        expanded = false
-                    }
-                )
-            }
+            DropdownMenuItem(
+                text = { Text("Approved") },
+                onClick = {
+                    onSelected(VariantType.APPROVED)
+                    expanded = false
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Unapproved") },
+                onClick = {
+                    onSelected(VariantType.UNAPPROVED)
+                    expanded = false
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun ProductDetailRow(label: String, value: String) {
+private fun SegmentedButtons(
+    active: VariantType,
+    onChange: (VariantType) -> Unit
+) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "$label:",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(120.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+        @Composable
+        fun seg(text: String, selected: Boolean, onClick: () -> Unit) {
+            val bg = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+            val fg = if (selected) Color.White else MaterialTheme.colorScheme.onSurface
+            TextButton(
+                onClick = onClick,
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = bg,
+                    contentColor = fg
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(text)
+            }
+        }
+
+        seg("Approved", active == VariantType.APPROVED) { onChange(VariantType.APPROVED) }
+        seg("Unapproved", active == VariantType.UNAPPROVED) { onChange(VariantType.UNAPPROVED) }
+    }
+}
+
+@Composable
+private fun ProductDetailRow(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = label + ":",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+            )
+            Text(
+                modifier = Modifier.padding(start = 12.dp),
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.End
+            )
+        }
+    }
+}
+
+
+
+@Composable
+private fun DottedDivider() {
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+    ) {
+        val y = size.height / 2f
+        drawLine(
+            color = dividerColor,
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+            strokeWidth = 2f
         )
     }
 }

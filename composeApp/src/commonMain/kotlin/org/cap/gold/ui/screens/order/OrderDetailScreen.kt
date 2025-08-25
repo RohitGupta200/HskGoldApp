@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+    import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import org.cap.gold.data.model.Order
 import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.ui.components.LoadingIndicator
+import kotlinx.datetime.toLocalDateTime
  
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +42,7 @@ fun OrderDetailScreen(
     }
 
     Scaffold(
+            contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 TopAppBar(
                     title = { Text("Order Details") },
@@ -51,10 +54,13 @@ fun OrderDetailScreen(
                 )
             }
     ) { padding ->
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
         when {
             uiState.isLoading -> {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = contentModifier,
                     contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator()
@@ -62,7 +68,7 @@ fun OrderDetailScreen(
             }
             uiState.error != null -> {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = contentModifier,
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -77,7 +83,7 @@ fun OrderDetailScreen(
                     onStatusChange = { newStatus ->
                         viewModel.updateOrderStatus(newStatus)
                     },
-                    modifier = Modifier.padding(padding)
+                    modifier = contentModifier
                 )
             }
         }
@@ -142,7 +148,17 @@ private fun OrderDetailContent(
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
         
         // Order Details
-        OrderDetailRow("Order date", order.createdAt)
+        val dateText = try {
+            val dt = kotlinx.datetime.Instant.fromEpochMilliseconds(order.createdAt)
+                .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+            val day = dt.dayOfMonth.toString().padStart(2, '0')
+            val month = dt.monthNumber.toString().padStart(2, '0')
+            val year = dt.year
+            "$day-$month-$year"
+        } catch (e: Exception) { "" }
+        OrderDetailRow("Order date", dateText)
+        // Allow toggling status change buttons when initially hidden
+        var showStatusButtons by remember(order.id, order.status) { mutableStateOf(order.status == OrderStatus.PENDING) }
         OrderDetailRow(
             "Order status", 
             order.status.name, 
@@ -153,8 +169,9 @@ private fun OrderDetailContent(
                 OrderStatus.SHIPPED -> Color(0xFF1E88E5)
                 OrderStatus.DELIVERED -> Color(0xFF5E35B1)
             },
-            showStatusButtons = order.status == OrderStatus.PENDING,
-            onStatusChange = onStatusChange
+            showStatusButtons = showStatusButtons,
+            onStatusChange = onStatusChange,
+            onRequestChangeStatus = { showStatusButtons = true }
         )
         OrderDetailRow("Order from", order.name.ifBlank { "Customer" })
         OrderDetailRow("Total amount", "₹${order.totalPrice}")
@@ -163,17 +180,10 @@ private fun OrderDetailContent(
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
         
         // Items Section
-        Text(
-            text = "Item #1",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
         
         // Item details (Mock data - in real app this would be from product info)
-        OrderDetailRow("", "24K Gold × 1")
-        OrderDetailRow("Weight", "100 grams")
-        OrderDetailRow("Dimensions", "50 mm x 30 mm x 5 mm")
+        OrderDetailRow("Item ", order.productName)
+        order.quantity?.toString()?.let { OrderDetailRow("Quantity", it) }
         OrderDetailRow("Amount", "₹${order.totalPrice}")
     }
 }
@@ -184,7 +194,8 @@ private fun OrderDetailRow(
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     showStatusButtons: Boolean = false,
-    onStatusChange: ((OrderStatus) -> Unit)? = null
+    onStatusChange: ((OrderStatus) -> Unit)? = null,
+    onRequestChangeStatus: (() -> Unit)? = null
 ) {
     Column {
         Row(
@@ -201,34 +212,45 @@ private fun OrderDetailRow(
             )
             
             if (showStatusButtons && label == "Order status") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Button(
                         onClick = { onStatusChange?.invoke(OrderStatus.CANCELLED) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.height(32.dp)
+
+                        modifier = Modifier.height(32.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                     ) {
-                        Text("Reject", fontSize = 12.sp)
+                        Text("Reject", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                     }
                     
                     Button(
                         onClick = { onStatusChange?.invoke(OrderStatus.CONFIRMED) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        ),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.height(32.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                     ) {
-                        Text("Accept", fontSize = 12.sp)
+                        Text("Accept", fontSize = 12.sp, color = Color(0xFF4CAF50))
                     }
                 }
             } else {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = valueColor,
-                    textAlign = TextAlign.End
-                )
+                if (label == "Order status" && onRequestChangeStatus != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = valueColor,
+                            textAlign = TextAlign.End
+                        )
+                        IconButton(onClick = onRequestChangeStatus) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit status")
+                        }
+                    }
+                } else {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = valueColor,
+                        textAlign = TextAlign.End
+                    )
+                }
             }
         }
         

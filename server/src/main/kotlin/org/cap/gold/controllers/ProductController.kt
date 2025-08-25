@@ -5,11 +5,14 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.http.content.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.cap.gold.models.*
 import org.cap.gold.repositories.ProductRepository
 import java.util.*
 import java.time.LocalDateTime
+import java.util.Base64
 
 class ProductController(private val productRepository: ProductRepository) {
     
@@ -17,6 +20,8 @@ class ProductController(private val productRepository: ProductRepository) {
         // Request DTO aligned with client payload (incoming)
         @Serializable
         data class CreateProductRequest(
+            val name: String,
+            val description: String,
             val price: Double,
             val weight: Double,
             val dimension: String,
@@ -28,6 +33,8 @@ class ProductController(private val productRepository: ProductRepository) {
         // Generic payload used for admin upsert-both
         @Serializable
         data class ProductPayload(
+            val name: String,
+            val description: String,
             val price: Double,
             val weight: Double,
             val dimension: String,
@@ -46,6 +53,8 @@ class ProductController(private val productRepository: ProductRepository) {
         // Update DTO to avoid receiving domain models with LocalDateTime
         @Serializable
         data class UpdateProductRequest(
+            val name: String,
+            val description: String,
             val price: Double,
             val weight: Double,
             val dimension: String,
@@ -58,6 +67,8 @@ class ProductController(private val productRepository: ProductRepository) {
         @Serializable
         data class ApprovedProductResponse(
             val id: String,
+            val name: String,
+            val description: String,
             val price: Double,
             val weight: Double,
             val dimension: String,
@@ -65,12 +76,15 @@ class ProductController(private val productRepository: ProductRepository) {
             val maxQuantity: Int,
             val category: String,
             val createdAt: String,
-            val updatedAt: String
+            val updatedAt: String,
+            val imageBase64: String? = null
         )
 
         @Serializable
         data class UnapprovedProductResponse(
             val id: String,
+            val name: String,
+            val description: String,
             val price: Double,
             val weight: Double,
             val dimension: String,
@@ -78,11 +92,14 @@ class ProductController(private val productRepository: ProductRepository) {
             val maxQuantity: Int,
             val category: String,
             val createdAt: String,
-            val updatedAt: String
+            val updatedAt: String,
+            val imageBase64: String? = null
         )
 
-        fun ApprovedProduct.toResponse() = ApprovedProductResponse(
+        fun ApprovedProduct.toResponse(imageBytes: ByteArray? = null) = ApprovedProductResponse(
             id = id.toString(),
+            name = name,
+            description = description,
             price = price,
             weight = weight,
             dimension = dimension,
@@ -90,11 +107,14 @@ class ProductController(private val productRepository: ProductRepository) {
             maxQuantity = maxQuantity,
             category = category,
             createdAt = createdAt.toString(),
-            updatedAt = updatedAt.toString()
+            updatedAt = updatedAt.toString(),
+            imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
         )
 
-        fun UnapprovedProduct.toResponse() = UnapprovedProductResponse(
+        fun UnapprovedProduct.toResponse(imageBytes: ByteArray? = null) = UnapprovedProductResponse(
             id = id.toString(),
+            name = name,
+            description = description,
             price = price,
             weight = weight,
             dimension = dimension,
@@ -102,7 +122,8 @@ class ProductController(private val productRepository: ProductRepository) {
             maxQuantity = maxQuantity,
             category = category,
             createdAt = createdAt.toString(),
-            updatedAt = updatedAt.toString()
+            updatedAt = updatedAt.toString(),
+            imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
         )
 
         route("/products") {
@@ -114,6 +135,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         ?: throw IllegalArgumentException("Invalid ID format")
                     val approved = productRepository.getApprovedProduct(id)
                     val unapproved = productRepository.getUnapprovedProduct(id)
+                    val img = productRepository.getImage(id)
                     if (approved == null && unapproved == null) {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
                         return@get
@@ -127,19 +149,48 @@ class ProductController(private val productRepository: ProductRepository) {
                     call.respond(
                         BothResponse(
                             id = id.toString(),
-                            approved = approved?.toResponse(),
-                            unapproved = unapproved?.toResponse()
+                            approved = approved?.toResponse(img),
+                            unapproved = unapproved?.toResponse(img)
                         )
                     )
                 }
 
                 // Create both (or copy one to the other if one missing)
                 post("both") {
-                    val req = call.receive<UpsertBothRequest>()
+                    // Support multipart (json + image) and pure JSON for backward compatibility
+                    val contentType = call.request.contentType()
+                    var req: UpsertBothRequest? = null
+                    var imageBytes: ByteArray? = null
+
+                    if (contentType.match(ContentType.MultiPart.FormData)) {
+                        val multipart = call.receiveMultipart()
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FileItem -> {
+                                    imageBytes = part.streamProvider().readBytes()
+                                }
+                                is PartData.FormItem -> {
+                                    if (part.name == "json") {
+                                        req = Json { ignoreUnknownKeys = true }.decodeFromString(UpsertBothRequest.serializer(), part.value)
+                                    }
+                                }
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+                        if (req == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Missing json payload part")
+                            return@post
+                        }
+                    } else {
+                        req = call.receive<UpsertBothRequest>()
+                    }
                     val now = LocalDateTime.now()
-                    val approvedModel = req.approved?.let {
+                    val approvedModel = req!!.approved?.let {
                         ApprovedProduct(
                             id = UUID.randomUUID(),
+                            name = it.name,
+                            description = it.description,
                             price = it.price,
                             weight = it.weight,
                             dimension = it.dimension,
@@ -150,9 +201,11 @@ class ProductController(private val productRepository: ProductRepository) {
                             updatedAt = now
                         )
                     }
-                    val unapprovedModel = req.unapproved?.let {
+                    val unapprovedModel = req!!.unapproved?.let {
                         UnapprovedProduct(
                             id = UUID.randomUUID(),
+                            name = it.name,
+                            description = it.description,
                             price = it.price,
                             weight = it.weight,
                             dimension = it.dimension,
@@ -164,11 +217,12 @@ class ProductController(private val productRepository: ProductRepository) {
                         )
                     }
                     val id = productRepository.upsertBoth(
-                        id = req.id?.let { UUID.fromString(it) },
+                        id = req!!.id?.let { UUID.fromString(it) },
                         approved = approvedModel,
                         unapproved = unapprovedModel,
                         isCreate = true
                     )
+                    imageBytes?.let { productRepository.upsertImage(id, it) }
                     call.respond(HttpStatusCode.Created, mapOf("id" to id.toString()))
                 }
 
@@ -176,13 +230,40 @@ class ProductController(private val productRepository: ProductRepository) {
                 put("{id}/both") {
                     val id = call.parameters["id"]?.let { UUID.fromString(it) }
                         ?: throw IllegalArgumentException("Invalid ID format")
-                    val req = call.receive<UpsertBothRequest>()
+                    val contentType = call.request.contentType()
+                    var req: UpsertBothRequest? = null
+                    var imageBytes: ByteArray? = null
+                    if (contentType.match(ContentType.MultiPart.FormData)) {
+                        val multipart = call.receiveMultipart()
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FileItem -> {
+                                    imageBytes = part.streamProvider().readBytes()
+                                }
+                                is PartData.FormItem -> {
+                                    if (part.name == "json") {
+                                        req = Json { ignoreUnknownKeys = true }.decodeFromString(UpsertBothRequest.serializer(), part.value)
+                                    }
+                                }
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+                        if (req == null) {
+                            call.respond(HttpStatusCode.BadRequest, "Missing json payload part")
+                            return@put
+                        }
+                    } else {
+                        req = call.receive<UpsertBothRequest>()
+                    }
                     val now = LocalDateTime.now()
-                    val approvedModel = req.approved?.let {
+                    val approvedModel = req!!.approved?.let {
                         // Keep createdAt from DB where possible
                         val existing = productRepository.getApprovedProduct(id)
                         ApprovedProduct(
                             id = id,
+                            name = it.name,
+                            description = it.description,
                             price = it.price,
                             weight = it.weight,
                             dimension = it.dimension,
@@ -193,10 +274,12 @@ class ProductController(private val productRepository: ProductRepository) {
                             updatedAt = now
                         )
                     }
-                    val unapprovedModel = req.unapproved?.let {
+                    val unapprovedModel = req!!.unapproved?.let {
                         val existing = productRepository.getUnapprovedProduct(id)
                         UnapprovedProduct(
                             id = id,
+                            name = it.name,
+                            description = it.description,
                             price = it.price,
                             weight = it.weight,
                             dimension = it.dimension,
@@ -213,6 +296,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         unapproved = unapprovedModel,
                         isCreate = false
                     )
+                    imageBytes?.let { productRepository.upsertImage(id, it) }
                     call.respond(HttpStatusCode.OK, mapOf("id" to id.toString()))
                 }
             }
@@ -222,7 +306,11 @@ class ProductController(private val productRepository: ProductRepository) {
                 // Get all approved products
                 get {
                     val products = productRepository.getAllApprovedProducts()
-                    call.respond(products.map { it.toResponse() })
+                    val response = products.map { p ->
+                        val img = productRepository.getImage(p.id)
+                        p.toResponse(img)
+                    }
+                    call.respond(response)
                 }
                 
                 // Create a new approved product
@@ -231,6 +319,8 @@ class ProductController(private val productRepository: ProductRepository) {
                     val now = LocalDateTime.now()
                     val newProduct = ApprovedProduct(
                         id = UUID.randomUUID(),
+                        name = req.name,
+                        description = req.description,
                         price = req.price,
                         weight = req.weight,
                         dimension = req.dimension,
@@ -248,10 +338,10 @@ class ProductController(private val productRepository: ProductRepository) {
                 get("{id}") {
                     val id = call.parameters["id"]?.let { UUID.fromString(it) } 
                         ?: throw IllegalArgumentException("Invalid ID format")
-                    
                     val product = productRepository.getApprovedProduct(id)
                     if (product != null) {
-                        call.respond(product.toResponse())
+                        val img = productRepository.getImage(product.id)
+                        call.respond(product.toResponse(img))
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
                     }
@@ -268,6 +358,8 @@ class ProductController(private val productRepository: ProductRepository) {
                     val dto = call.receive<UpdateProductRequest>()
                     val product = ApprovedProduct(
                         id = id,
+                        name = dto.name,
+                        description = dto.description,
                         price = dto.price,
                         weight = dto.weight,
                         dimension = dto.dimension,
@@ -302,17 +394,21 @@ class ProductController(private val productRepository: ProductRepository) {
                 // Get all unapproved products
                 get {
                     val products = productRepository.getAllUnapprovedProducts()
-                    call.respond(products.map { it.toResponse() })
+                    val response = products.map { p ->
+                        val img = productRepository.getImage(p.id)
+                        p.toResponse(img)
+                    }
+                    call.respond(response)
                 }
                 
                 // Get a single unapproved product
                 get("{id}") {
                     val id = call.parameters["id"]?.let { UUID.fromString(it) } 
                         ?: throw IllegalArgumentException("Invalid ID format")
-                    
                     val product = productRepository.getUnapprovedProduct(id)
                     if (product != null) {
-                        call.respond(product.toResponse())
+                        val img = productRepository.getImage(product.id)
+                        call.respond(product.toResponse(img))
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
                     }
@@ -324,6 +420,8 @@ class ProductController(private val productRepository: ProductRepository) {
                     val now = LocalDateTime.now()
                     val newProduct = UnapprovedProduct(
                         id = UUID.randomUUID(),
+                        name = req.name,
+                        description = req.description,
                         price = req.price,
                         weight = req.weight,
                         dimension = req.dimension,
@@ -348,6 +446,8 @@ class ProductController(private val productRepository: ProductRepository) {
                     val dto = call.receive<UpdateProductRequest>()
                     val product = UnapprovedProduct(
                         id = id,
+                        name = dto.name,
+                        description = dto.description,
                         price = dto.price,
                         weight = dto.weight,
                         dimension = dto.dimension,

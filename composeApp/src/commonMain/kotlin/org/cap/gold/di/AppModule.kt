@@ -7,6 +7,8 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.cap.gold.ui.screens.admin.AdminOrdersViewModel
 import org.cap.gold.ui.screens.orders.OrdersViewModel
+import org.cap.gold.ui.screens.product.ProductDetailViewModel
+import org.cap.gold.ui.screens.order.OrderDetailViewModel
 
 /**
  * Main entry point for Koin dependency injection setup
@@ -28,6 +30,7 @@ fun initKoin(
         modules(
             configModule,
             networkModule,
+            apiServicesModule,
             repositoryModule,
             uiViewModelModule
         )
@@ -47,4 +50,13 @@ val uiViewModelModule = module {
     // ViewModels
     single { AdminOrdersViewModel() }
     single { OrdersViewModel() }
+    single { OrderDetailViewModel() }
+    factory { (productId: String, isAdmin: Boolean, isApprovedUser: Boolean) ->
+        ProductDetailViewModel(
+            productApiService = get(),
+            productId = productId,
+            isAdmin = isAdmin,
+            isApprovedUser = isApprovedUser
+        )
+    }
 }

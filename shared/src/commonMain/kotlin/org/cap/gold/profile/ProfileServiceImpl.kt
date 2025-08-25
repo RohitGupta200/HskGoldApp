@@ -4,6 +4,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.get
+import io.ktor.client.request.put
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -21,7 +22,11 @@ class ProfileServiceImpl(
     private data class ChangePasswordRequest(val currentPassword: String? = null, val newPassword: String)
 
     @Serializable
-    private data class ChangePhoneRequest(val password: String? = null, val newPhone: String)
+    private data class UpdateMeRequest(
+        val displayName: String? = null,
+        val email: String? = null,
+        val phoneNumber: String? = null
+    )
 
     @Serializable
     private data class PhoneChangeResponse(
@@ -34,10 +39,10 @@ class ProfileServiceImpl(
         val isNewUser: Boolean = false
     )
 
-    override suspend fun changePassword(newPassword: String) {
+    override suspend fun changePassword(currentPassword: String?, newPassword: String) {
         val resp = network.client.post("$baseUrl/api/auth/password/change") {
             contentType(ContentType.Application.Json)
-            setBody(ChangePasswordRequest(newPassword = newPassword))
+            setBody(ChangePasswordRequest(currentPassword = currentPassword, newPassword = newPassword))
         }
         if (resp.status.value !in 200..299) {
             val msg = try { resp.bodyAsText() } catch (_: Exception) { "Password change failed" }
@@ -46,28 +51,40 @@ class ProfileServiceImpl(
     }
 
     override suspend fun changePhone(newPhone: String): User {
-        val httpResp: HttpResponse = network.client.post("$baseUrl/api/auth/phone/change") {
+        val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
             contentType(ContentType.Application.Json)
-            setBody(ChangePhoneRequest(newPhone = newPhone))
+            setBody(UpdateMeRequest(phoneNumber = newPhone))
         }
         if (httpResp.status.value !in 200..299) {
             val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Phone change failed" }
             throw IllegalStateException(msg.ifBlank { "Phone change failed" })
         }
-        // Try expected response, fallback to user directly
-        return try {
-            val resp: PhoneChangeResponse = httpResp.body()
-            User(
-                id = resp.userId,
-                phoneNumber = resp.phoneNumber,
-                email = resp.email,
-                displayName = resp.displayName,
-                isEmailVerified = false
-            )
-        } catch (_: Exception) {
-            // If server returns User directly (e.g., /auth/me shape)
-            httpResp.body<User>()
+        // Refresh and return canonical user
+        return getMe()
+    }
+
+    override suspend fun changeEmail(newEmail: String): User {
+        val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
+            contentType(ContentType.Application.Json)
+            setBody(UpdateMeRequest(email = newEmail))
         }
+        if (httpResp.status.value !in 200..299) {
+            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Email change failed" }
+            throw IllegalStateException(msg.ifBlank { "Email change failed" })
+        }
+        return getMe()
+    }
+
+    override suspend fun changeName(newName: String): User {
+        val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
+            contentType(ContentType.Application.Json)
+            setBody(UpdateMeRequest(displayName = newName))
+        }
+        if (httpResp.status.value !in 200..299) {
+            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Name change failed" }
+            throw IllegalStateException(msg.ifBlank { "Name change failed" })
+        }
+        return getMe()
     }
 
     override suspend fun getMe(): User {
@@ -85,3 +102,4 @@ class ProfileServiceImpl(
         }
     }
 }
+

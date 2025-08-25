@@ -29,6 +29,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
+import org.cap.gold.di.userModule
 import org.cap.gold.model.User
 import org.cap.gold.ui.screens.admin.AdminOrdersScreen
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -52,7 +53,7 @@ fun HomeScreen(
         object : Screen {
             @Composable
             override fun Content() {
-                ProfileScreen(user = user, onLogout = onLogout)
+                AccountScreen(user = user, onLogout = onLogout)
             }
         }
     }
@@ -70,6 +71,7 @@ fun HomeScreen(
 
     // Main content with bottom navigation
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
             BottomNavigationBar(
                 screens = screens,
@@ -83,19 +85,26 @@ fun HomeScreen(
                     }
                     val screen = target ?: AppScreen.Products
                     if (screen.route != (currentScreen.value?.route ?: "")) {
+                        // Only update the selected tab; do not push onto the back stack
                         currentScreen.value = screen
-                        navigator?.push(screen.createScreen(user, onLogout))
                     }
                 }
             )
         }
     ) { innerPadding ->
-        // Display the current screen based on the route
-        when (val screen = currentScreen.value ?: AppScreen.Products) {
-            is AppScreen.Products -> ProductsScreen(user = user, navigator = navigator)
-            is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen()
-            is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
-            is AppScreen.Users -> if (user.role == 0) UsersScreen() else {}
+        // Ensure child screens are padded by Scaffold's insets (status bar and bottom bar)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Display the current screen based on the route
+            when (val screen = currentScreen.value ?: AppScreen.Products) {
+                is AppScreen.Products -> ProductsScreen(user = user, navigator = navigator)
+                is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen()
+                is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
+                is AppScreen.Users -> if (user.role == 0) UsersScreen() else {}
+            }
         }
     }
 }

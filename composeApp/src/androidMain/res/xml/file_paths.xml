@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Allow cache pictures (e.g., camera capture temp files) -->
+    <cache-path name="cache" path="." />
+    <!-- Allow app-specific files in external storage -->
+    <external-files-path name="external_files" path="." />
+</paths>

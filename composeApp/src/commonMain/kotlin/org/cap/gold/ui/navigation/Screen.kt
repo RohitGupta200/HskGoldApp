@@ -10,7 +10,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import org.cap.gold.model.User
 import org.cap.gold.ui.screens.OrdersScreen
 import org.cap.gold.ui.screens.ProductsScreen
-import org.cap.gold.ui.screens.ProfileScreen
+import org.cap.gold.ui.screens.AccountScreen
 import org.cap.gold.ui.screens.UsersScreen
 
 sealed class AppScreen(
@@ -49,13 +49,13 @@ sealed class AppScreen(
     
     object Profile : AppScreen(
         route = "profile",
-        title = "Profile",
+        title = "Account",
         icon = Icons.Default.Person,
         createScreen = { user, onLogout ->
             object : Screen {
                 @Composable
                 override fun Content() {
-                    ProfileScreen(user = user, onLogout = onLogout)
+                    AccountScreen(user = user, onLogout = onLogout)
                 }
             }
         }

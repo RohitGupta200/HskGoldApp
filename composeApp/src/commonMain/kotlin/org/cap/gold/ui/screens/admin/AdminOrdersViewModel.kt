@@ -34,13 +34,10 @@ class AdminOrdersViewModel : KoinComponent {
     private fun formatDateTime(millis: Long): String {
         return try {
             val dt = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
-            val month = dt.month.name.lowercase().replaceFirstChar { it.titlecase() }.take(3)
             val day = dt.dayOfMonth.toString().padStart(2, '0')
+            val month = dt.monthNumber.toString().padStart(2, '0')
             val year = dt.year
-            val hour12 = ((dt.hour % 12).let { if (it == 0) 12 else it }).toString().padStart(2, '0')
-            val minute = dt.minute.toString().padStart(2, '0')
-            val ampm = if (dt.hour < 12) "AM" else "PM"
-            "$month $day, $year • $hour12:$minute $ampm"
+            "$day-$month-$year"
         } catch (e: Exception) { "" }
     }
 
@@ -63,11 +60,11 @@ class AdminOrdersViewModel : KoinComponent {
                 )) {
                     is org.cap.gold.data.network.NetworkResponse.Success -> {
                         val mapped = resp.data.data.map { order ->
-                            val dateMillis = order.createdAt.toLongOrNull() ?: 0L
+                            val dateMillis = order.createdAt
                             OrderUiModel(
                                 id = order.id,
                                 orderNumber = order.id,
-                                productName = order.productId,
+                                productName = order.productName.ifBlank { order.productId },
                                 quantity = order.quantity,
                                 totalAmount = order.totalPrice,
                                 status = order.status,

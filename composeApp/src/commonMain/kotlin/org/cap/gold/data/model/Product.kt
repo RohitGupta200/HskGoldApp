@@ -8,6 +8,7 @@ data class Product(
     val name: String = "",
     val price: Double,
     val imageUrl: String = "https://via.placeholder.com/150", // Default placeholder image
+    val imageBase64: String? = null,
     val category: String = "",
     val description: String = "",
     val weight: Double = 0.0,

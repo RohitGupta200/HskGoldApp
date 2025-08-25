@@ -20,7 +20,10 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
+import org.cap.gold.ui.navigation.ManageCategoriesVoyagerScreen
+import org.cap.gold.ui.navigation.ProductDetailVoyagerScreen
+import org.cap.gold.ui.navigation.AppRoute
+import org.cap.gold.ui.navigation.LocalAppNavigator
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import kotlinx.coroutines.launch
@@ -41,24 +44,14 @@ fun ProductsScreen(
     user: User,
     navigator: Navigator? = LocalNavigator.current
 ) {
+    val appNavigator = LocalAppNavigator.current
     val userRole = user.role
     val onProductClick: (String) -> Unit = { productId ->
-        navigator?.push(object : Screen {
-            @Composable
-            override fun Content() {
-                val viewModel: ProductDetailViewModel = koinInject(
-                    parameters = { parametersOf(productId, user.role == 0, user.role == 1) }
-                )
-                ProductDetailScreen(
-                    viewModel = viewModel,
-                    user = user,
-                    onBackClick = { navigator.pop() },
-                    onOrderSuccess = { navigator.pop() },
-                    onProductUpdated = { navigator.pop() },
-                    onProductDeleted = { navigator.pop() }
-                )
-            }
-        })
+        if (appNavigator != null) {
+            appNavigator.push(AppRoute.ProductDetail(productId, user))
+        } else {
+            navigator?.push(ProductDetailVoyagerScreen(productId = productId, user = user))
+        }
     }
 
     val productRepository = koinInject<ProductRepository> { parametersOf(userRole) }
@@ -127,7 +120,13 @@ fun ProductsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                OutlinedButton(onClick = { /* TODO: Navigate to ManageCategoriesScreen */ }) {
+                OutlinedButton(onClick = {
+                    if (appNavigator != null) {
+                        appNavigator.push(AppRoute.ManageCategories)
+                    } else {
+                        navigator?.push(ManageCategoriesVoyagerScreen())
+                    }
+                }) {
                     Text("Manage Categories")
                 }
                 if (products.isEmpty()) {
@@ -250,7 +249,7 @@ fun ProductsScreen(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            contentPadding = PaddingValues(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -259,7 +258,7 @@ fun ProductsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {

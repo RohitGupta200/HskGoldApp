@@ -14,7 +14,8 @@ class DatabaseFactory(config: ApplicationConfig) {
     private val hikariConfig = HikariConfig().apply {
         driverClassName = config.property("database.driverClassName").getString()
         val rawUrl = config.property("database.jdbcURL").getString()
-        jdbcUrl = normalizeJdbcUrl(rawUrl)
+        val sslMode = config.propertyOrNull("database.sslmode")?.getString()
+        jdbcUrl = normalizeJdbcUrl(rawUrl, sslMode)
         username = config.propertyOrNull("database.user")?.getString()
         password = config.propertyOrNull("database.password")?.getString()
         maximumPoolSize = config.property("database.maxPoolSize").getString().toInt()
@@ -49,9 +50,9 @@ fun ApplicationConfig.getDatabaseConfig(): DatabaseFactory {
     return DatabaseFactory(this)
 }
 
-// Convert Render-style postgres URL to JDBC if needed and enforce sslmode=require
-private fun normalizeJdbcUrl(url: String): String {
-    if (url.startsWith("jdbc:")) return ensureSslMode(url)
+// Convert postgres URL to JDBC if needed and optionally apply sslmode from config.
+private fun normalizeJdbcUrl(url: String, sslMode: String?): String {
+    if (url.startsWith("jdbc:")) return applySslModeIfProvided(url, sslMode)
     if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
         val normalized = if (url.startsWith("postgres://")) url.replaceFirst("postgres://", "postgresql://") else url
         val uri = URI(normalized)
@@ -60,21 +61,33 @@ private fun normalizeJdbcUrl(url: String): String {
         val database = uri.path.trimStart('/')
         val query = uri.rawQuery ?: ""
         val jdbcBase = "jdbc:postgresql://$host:$port/$database"
-        val finalQuery = if (query.isBlank()) "sslmode=require" else ensureSslInQuery(query)
+        val finalQuery = if (sslMode.isNullOrBlank()) query else ensureOrOverrideSslInQuery(query, sslMode)
         return if (finalQuery.isBlank()) jdbcBase else "$jdbcBase?$finalQuery"
     }
-    return url
+    return applySslModeIfProvided(url, sslMode)
 }
 
-private fun ensureSslMode(jdbcUrl: String): String {
+private fun applySslModeIfProvided(jdbcUrl: String, sslMode: String?): String {
+    if (sslMode.isNullOrBlank()) return jdbcUrl
     val parts = jdbcUrl.split("?", limit = 2)
     val base = parts[0]
     val query = if (parts.size > 1) parts[1] else ""
-    val finalQuery = if (query.isBlank()) "sslmode=require" else ensureSslInQuery(query)
+    val finalQuery = ensureOrOverrideSslInQuery(query, sslMode)
     return if (finalQuery.isBlank()) base else "$base?$finalQuery"
 }
 
-private fun ensureSslInQuery(query: String): String {
-    val hasSsl = query.split('&').any { it.startsWith("sslmode=") }
-    return if (hasSsl) query else if (query.isBlank()) "sslmode=require" else "$query&sslmode=require"
+private fun ensureOrOverrideSslInQuery(query: String, sslMode: String): String {
+    if (query.isBlank()) return "sslmode=$sslMode"
+    val params = query.split('&').toMutableList()
+    var found = false
+    for (i in params.indices) {
+        if (params[i].startsWith("sslmode=")) {
+            params[i] = "sslmode=$sslMode"
+            found = true
+            break
+        }
+    }
+    if (!found) params.add("sslmode=$sslMode")
+    return params.joinToString("&")
 }
+

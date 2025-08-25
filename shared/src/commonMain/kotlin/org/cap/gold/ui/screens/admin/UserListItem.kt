@@ -156,8 +156,7 @@ fun UserListItem(
                     listOf(
                         "Admin" to 0,
                         "Approved" to 1,
-                        "Unapproved" to 2,
-                        "User" to 3
+                        "Unapproved" to 2
                     ).forEach { (roleName, roleValue) ->
                         DropdownMenuItem(
                             text = { Text(roleName) },

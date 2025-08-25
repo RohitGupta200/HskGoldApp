@@ -3,6 +3,7 @@ package org.cap.gold.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import org.cap.gold.data.model.Product
 import org.cap.gold.data.model.Order
@@ -12,16 +13,21 @@ import org.koin.core.component.inject
 import kotlinx.serialization.Serializable
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.content.*
+import kotlinx.serialization.json.Json
 
 @Serializable
 data class SimpleProductResponse(
     val id: String? = null,
+    val name: String = "",
+    val description: String = "",
     val price: Double,
     val weight: Double,
     val dimension: String,
     val purity: String,
     val maxQuantity: Int,
     val category: String,
+    val imageBase64: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 )
@@ -49,8 +55,22 @@ interface ProductApiService {
     suspend fun deleteUnapprovedProduct(id: String): Boolean
     // Admin endpoints to manage both variants together
     suspend fun getBothVariantsById(id: String): BothVariantsResponse
-    suspend fun createBothVariants(id: String? = null, approved: Product?, unapproved: Product?): String
-    suspend fun updateBothVariants(id: String, approved: Product?, unapproved: Product?): String
+    suspend fun createBothVariants(
+        id: String? = null,
+        approved: Product?,
+        unapproved: Product?,
+        imageBytes: ByteArray? = null,
+        imageFileName: String? = null,
+        imageContentType: ContentType = ContentType.Image.Any
+    ): String
+    suspend fun updateBothVariants(
+        id: String,
+        approved: Product?,
+        unapproved: Product?,
+        imageBytes: ByteArray? = null,
+        imageFileName: String? = null,
+        imageContentType: ContentType = ContentType.Image.Any
+    ): String
     // Order-related (stub for now)
     suspend fun createOrder(
         productId: String,
@@ -69,25 +89,41 @@ class ProductApiServiceImpl(
 ) : ProductApiService, KoinComponent {
     
     override suspend fun getApprovedProducts(): List<Product> =
-        client.get("api/products/approved").body()
+        client.get("api/products/approved").body<List<SimpleProductResponse>>().map { it.toProduct(it.id ?: "") }
 
     override suspend fun getUnapprovedProducts(): List<Product> =
-        client.get("api/products/unapproved").body()
+        client.get("api/products/unapproved").body<List<SimpleProductResponse>>().map { it.toProduct(it.id ?: "") }
 
     override suspend fun getProductById(id: String): Product =
-        client.get("api/products/approved/$id").body()
+        client.get("api/products/approved/$id").body<SimpleProductResponse>().toProduct(id)
 
     override suspend fun getUnapprovedProductById(id: String): Product =
-        client.get("api/products/unapproved/$id").body()
+        client.get("api/products/unapproved/$id").body<SimpleProductResponse>().toProduct(id)
 
     @Serializable
     private data class ProductPayload(
+        val name: String,
+        val description: String,
         val price: Double,
         val weight: Double,
         val dimension: String,
         val purity: String,
         val maxQuantity: Int,
         val category: String
+    )
+
+    private fun SimpleProductResponse.toProduct(id: String): Product = Product(
+        id = id,
+        name = this.name,
+        price = this.price,
+        imageUrl = "",
+        imageBase64 = this.imageBase64,
+        category = this.category,
+        description = this.description,
+        weight = this.weight,
+        purity = this.purity,
+        dimension = this.dimension,
+        maxQuantity = this.maxQuantity
     )
 
     
@@ -100,10 +136,12 @@ class ProductApiServiceImpl(
     )
 
     private fun Product.toPayload(): ProductPayload = ProductPayload(
+        name = this.name,
+        description = this.description,
         price = this.price,
         weight = this.weight,
         dimension = this.dimension,
-        purity = this.purity.toString(),
+        purity = this.purity,
         maxQuantity = this.maxQuantity,
         category = this.category
     )
@@ -112,25 +150,25 @@ class ProductApiServiceImpl(
         client.post("api/products/approved") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body()
+        }.body<SimpleProductResponse>().let { it.toProduct(it.id ?: "") }
 
     override suspend fun createUnapprovedProduct(product: Product): Product =
         client.post("api/products/unapproved") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body()
+        }.body<SimpleProductResponse>().let { it.toProduct(it.id ?: "") }
 
     override suspend fun updateApprovedProduct(id: String, product: Product): Product =
         client.put("api/products/approved/$id") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body()
+        }.body<SimpleProductResponse>().toProduct(id)
 
     override suspend fun updateUnapprovedProduct(id: String, product: Product): Product =
         client.put("api/products/unapproved/$id") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body()
+        }.body<SimpleProductResponse>().toProduct(id)
 
     override suspend fun deleteApprovedProduct(id: String): Boolean {
         val response: HttpResponse = client.delete("api/products/approved/$id")
@@ -149,16 +187,46 @@ class ProductApiServiceImpl(
     override suspend fun createBothVariants(
         id: String?,
         approved: Product?,
-        unapproved: Product?
+        unapproved: Product?,
+        imageBytes: ByteArray?,
+        imageFileName: String?,
+        imageContentType: ContentType
     ): String {
         val payload = UpsertBothRequest(
             id = id,
             approved = approved?.toPayload(),
             unapproved = unapproved?.toPayload()
         )
-        val resp: HttpResponse = client.post("api/products/admin/both") {
-            contentType(ContentType.Application.Json)
-            setBody(payload)
+        val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
+            val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)
+            client.post("api/products/admin/both") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                "json",
+                                json,
+                                headersOf(
+                                    HttpHeaders.ContentType to listOf(ContentType.Application.Json.toString())
+                                )
+                            )
+                            append(
+                                "image",
+                                imageBytes,
+                                headersOf(
+                                    HttpHeaders.ContentType to listOf(imageContentType.toString()),
+                                    HttpHeaders.ContentDisposition to listOf("filename=\"$imageFileName\"")
+                                )
+                            )
+                        }
+                    )
+                )
+            }
+        } else {
+            client.post("api/products/admin/both") {
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
         }
         // Expect { id: String }
         @Serializable data class IdResp(val id: String)
@@ -174,15 +242,45 @@ class ProductApiServiceImpl(
     override suspend fun updateBothVariants(
         id: String,
         approved: Product?,
-        unapproved: Product?
+        unapproved: Product?,
+        imageBytes: ByteArray?,
+        imageFileName: String?,
+        imageContentType: ContentType
     ): String {
         val payload = UpsertBothRequest(
             approved = approved?.toPayload(),
             unapproved = unapproved?.toPayload()
         )
-        val resp: HttpResponse = client.put("api/products/admin/$id/both") {
-            contentType(ContentType.Application.Json)
-            setBody(payload)
+        val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
+            val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)
+            client.put("api/products/admin/$id/both") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                "json",
+                                json,
+                                headersOf(
+                                    HttpHeaders.ContentType to listOf(ContentType.Application.Json.toString())
+                                )
+                            )
+                            append(
+                                "image",
+                                imageBytes,
+                                headersOf(
+                                    HttpHeaders.ContentType to listOf(imageContentType.toString()),
+                                    HttpHeaders.ContentDisposition to listOf("filename=\"$imageFileName\"")
+                                )
+                            )
+                        }
+                    )
+                )
+            }
+        } else {
+            client.put("api/products/admin/$id/both") {
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
         }
         @Serializable data class IdResp(val id: String)
         return try { resp.body<IdResp>().id } catch (_: Exception) {

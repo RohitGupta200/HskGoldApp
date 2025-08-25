@@ -1,5 +1,6 @@
 package org.cap.gold.data.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.cap.gold.util.newUUID
 
@@ -8,14 +9,16 @@ data class Order(
     val id: String = newUUID(),
     val userId: String = "",
     val productId: String = "",
-    val quantity: Int = 1,
-    val totalPrice: Double = 0.0,
+    @SerialName("productQuantity") val quantity: Int = 1,
+    @SerialName("totalAmount") val totalPrice: Double = 0.0,
     val status: OrderStatus = OrderStatus.PENDING,
-    val createdAt: String = "",
-    val updatedAt: String = "",
+    // Server sends epoch millis as number
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L,
     val address: String = "",
-    val phoneNumber: String = "",
-    val name: String = ""
+    @SerialName("userMobile") val phoneNumber: String = "",
+    @SerialName("userName") val name: String = "",
+    @SerialName("productName") val productName: String = ""
 )
 
 @Serializable

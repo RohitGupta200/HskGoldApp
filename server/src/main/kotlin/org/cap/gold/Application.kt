@@ -42,6 +42,7 @@ import org.cap.gold.models.OrderStatusGroup
 import org.cap.gold.models.Orders
 import org.cap.gold.models.ProductsApproved
 import org.cap.gold.models.ProductsUnapproved
+import org.cap.gold.models.ProductImages
 import org.cap.gold.models.UnapprovedProduct
 import org.cap.gold.models.Categories
 import org.cap.gold.repositories.OrderRepository
@@ -249,13 +250,61 @@ fun Application.module() {
     
     // Initialize Database
     DatabaseFactory(environment.config)
-    // Auto-create schema in development environments (safe idempotent call)
+    // Auto-create schema and run lightweight migration for newly added non-null columns
     transaction {
+        // 1) Ensure 'name' column exists and is backfilled for existing rows, then enforce NOT NULL
+        // Approved table
+        exec("""
+            ALTER TABLE products_approved ADD COLUMN IF NOT EXISTS name VARCHAR(200);
+        """.trimIndent())
+        exec("""
+            UPDATE products_approved SET name = COALESCE(name, '') WHERE name IS NULL;
+        """.trimIndent())
+        exec("""
+            ALTER TABLE products_approved ALTER COLUMN name SET NOT NULL;
+        """.trimIndent())
+
+        // Unapproved table
+        exec("""
+            ALTER TABLE products_unapproved ADD COLUMN IF NOT EXISTS name VARCHAR(200);
+        """.trimIndent())
+        exec("""
+            UPDATE products_unapproved SET name = COALESCE(name, '') WHERE name IS NULL;
+        """.trimIndent())
+        exec("""
+            ALTER TABLE products_unapproved ALTER COLUMN name SET NOT NULL;
+        """.trimIndent())
+
+        // 1.b) Ensure 'description' column exists, backfill, and enforce NOT NULL (both tables)
+        // Approved table
+        exec("""
+            ALTER TABLE products_approved ADD COLUMN IF NOT EXISTS description VARCHAR(1000);
+        """.trimIndent())
+        exec("""
+            UPDATE products_approved SET description = COALESCE(description, '') WHERE description IS NULL;
+        """.trimIndent())
+        exec("""
+            ALTER TABLE products_approved ALTER COLUMN description SET NOT NULL;
+        """.trimIndent())
+
+        // Unapproved table
+        exec("""
+            ALTER TABLE products_unapproved ADD COLUMN IF NOT EXISTS description VARCHAR(1000);
+        """.trimIndent())
+        exec("""
+            UPDATE products_unapproved SET description = COALESCE(description, '') WHERE description IS NULL;
+        """.trimIndent())
+        exec("""
+            ALTER TABLE products_unapproved ALTER COLUMN description SET NOT NULL;
+        """.trimIndent())
+
+        // 2) Create any missing tables/columns for the rest of the schema
         SchemaUtils.createMissingTablesAndColumns(
             ProductsApproved,
             ProductsUnapproved,
             Orders,
-            Categories
+            Categories,
+            ProductImages
         )
     }
     

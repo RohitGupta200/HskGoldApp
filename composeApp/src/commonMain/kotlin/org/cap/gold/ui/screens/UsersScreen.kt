@@ -20,35 +20,41 @@ import kotlinx.coroutines.launch
 import org.cap.gold.ui.components.ErrorView
 import org.cap.gold.ui.screens.admin.UserListItem
 import org.cap.gold.ui.screens.admin.UsersUiState
+import org.cap.gold.ui.screens.admin.UsersViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsersScreen(
     uiState: UsersUiState = UsersUiState.Loading,
     onBackClick: () -> Unit = {},
-    onRefreshClick: () -> Unit = {},
-    onSearch: (String) -> Unit = {},
-    onUpdateUserRole: (String, Int, () -> Unit) -> Unit = { _, _, _ -> }
+
+    onSearch: (String) -> Unit = {}
 ) {
+    val vm: UsersViewModel = koinInject()
+    val state =  vm.uiState
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val onUpdateUserRole: (String, Int, () -> Unit) -> Unit = { uid, newRole, onSuccess -> vm.updateUserRole(uid, newRole, onSuccess) }
+
     // Show snackbar when there's an error
-    LaunchedEffect(uiState) {
-        if (uiState is UsersUiState.Error) {
+    LaunchedEffect(state) {
+        if (state is UsersUiState.Error) {
             snackbarHostState.showSnackbar(
-                message = uiState.message,
+                message = state.message,
                 withDismissAction = true
             )
         }
     }
-
+    val onRefreshClick: () -> Unit = {vm.loadUsers()}
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             UsersTopAppBar(
                 onBackClick = onBackClick,
                 onRefreshClick = onRefreshClick,
-                isLoading = uiState is UsersUiState.Loading
+                isLoading = state is UsersUiState.Loading,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -91,7 +97,7 @@ fun UsersScreen(
                 // Search suggestions would go here
             }
 
-            when (val state = uiState) {
+            when (val state = state) {
                 is UsersUiState.Loading -> {
                     Box(
                         modifier = Modifier

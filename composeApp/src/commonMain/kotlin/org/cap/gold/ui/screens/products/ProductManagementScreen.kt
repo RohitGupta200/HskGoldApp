@@ -48,6 +48,7 @@ fun ProductManagementScreen(
     var showAddProductDialog by remember { mutableStateOf(false) }
     
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text(if (isAdmin) "Manage Products" else "Our Collection") },
