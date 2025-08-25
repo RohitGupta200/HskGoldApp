@@ -15,6 +15,8 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.content.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.builtins.ListSerializer
+import org.cap.gold.cache.ClientCache
 
 @Serializable
 data class SimpleProductResponse(
@@ -88,8 +90,40 @@ class ProductApiServiceImpl(
     private val client: HttpClient
 ) : ProductApiService, KoinComponent {
     
-    override suspend fun getApprovedProducts(): List<Product> =
-        client.get("api/products/approved").body<List<SimpleProductResponse>>().map { it.toProduct(it.id ?: "") }
+    override suspend fun getApprovedProducts(): List<Product> {
+        val key = "GET:/api/products/approved"
+        val ttlSeconds = 300L // 5 minutes
+        // Try cached JSON first
+        val cached = ClientCache.getFresh(key)
+        if (cached != null) {
+            return try {
+                Json { ignoreUnknownKeys = true }
+                    .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), cached)
+                    .map { it.toProduct(it.id ?: "") }
+            } catch (_: Exception) {
+                // fall through to network
+                emptyList()
+            }.ifEmpty {
+                // If parsing failed to produce data, fetch from network
+                val text = client.get("api/products/approved") {
+                    header("X-Cache-Ttl", ttlSeconds.toString())
+                }.bodyAsText()
+                // Store in cache
+                ClientCache.put(key, text, ttlSeconds)
+                Json { ignoreUnknownKeys = true }
+                    .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), text)
+                    .map { it.toProduct(it.id ?: "") }
+            }
+        }
+        // No cache hit; fetch and cache
+        val text = client.get("api/products/approved") {
+            header("X-Cache-Ttl", ttlSeconds.toString())
+        }.bodyAsText()
+        ClientCache.put(key, text, ttlSeconds)
+        return Json { ignoreUnknownKeys = true }
+            .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), text)
+            .map { it.toProduct(it.id ?: "") }
+    }
 
     override suspend fun getUnapprovedProducts(): List<Product> =
         client.get("api/products/unapproved").body<List<SimpleProductResponse>>().map { it.toProduct(it.id ?: "") }
@@ -150,7 +184,11 @@ class ProductApiServiceImpl(
         client.post("api/products/approved") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body<SimpleProductResponse>().let { it.toProduct(it.id ?: "") }
+        }.body<SimpleProductResponse>().let {
+            // Invalidate approved list cache
+            ClientCache.invalidate("GET:/api/products/approved")
+            it.toProduct(it.id ?: "")
+        }
 
     override suspend fun createUnapprovedProduct(product: Product): Product =
         client.post("api/products/unapproved") {
@@ -162,7 +200,9 @@ class ProductApiServiceImpl(
         client.put("api/products/approved/$id") {
             contentType(ContentType.Application.Json)
             setBody(product.toPayload())
-        }.body<SimpleProductResponse>().toProduct(id)
+        }.body<SimpleProductResponse>().toProduct(id).also {
+            ClientCache.invalidate("GET:/api/products/approved")
+        }
 
     override suspend fun updateUnapprovedProduct(id: String, product: Product): Product =
         client.put("api/products/unapproved/$id") {
@@ -172,7 +212,9 @@ class ProductApiServiceImpl(
 
     override suspend fun deleteApprovedProduct(id: String): Boolean {
         val response: HttpResponse = client.delete("api/products/approved/$id")
-        return response.status.isSuccess()
+        val ok = response.status.isSuccess()
+        if (ok) ClientCache.invalidate("GET:/api/products/approved")
+        return ok
     }
 
     override suspend fun deleteUnapprovedProduct(id: String): Boolean {

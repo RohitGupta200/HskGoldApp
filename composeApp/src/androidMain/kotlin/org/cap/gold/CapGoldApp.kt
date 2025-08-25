@@ -9,6 +9,7 @@ import org.cap.gold.di.repositoryModule
 import org.cap.gold.di.networkModule
 import org.cap.gold.di.apiServicesModule
 import org.cap.gold.di.uiViewModelModule
+import org.cap.gold.di.androidNetworkOverrideModule
 
 class CapGoldApp : Application() {
     override fun onCreate() {
@@ -24,7 +25,7 @@ class CapGoldApp : Application() {
                 // Provide Android context for androidAuthModule
                 androidContext(this@CapGoldApp)
                 // Include app-layer modules providing ProductRepository, HttpClient, etc.
-                modules(apiServicesModule, networkModule, repositoryModule, uiViewModelModule)
+                modules(apiServicesModule, networkModule, androidNetworkOverrideModule, repositoryModule, uiViewModelModule)
             }
         )
     }

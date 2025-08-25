@@ -50,8 +50,8 @@ kotlin {
             implementation(libs.androidx.navigation.common.ktx)
             implementation(libs.androidx.navigation.runtime.ktx)
 
-            // Ktor Android engine for app HttpClient
-            implementation("io.ktor:ktor-client-android:2.3.4")
+            // Prefer OkHttp engine for disk caching/interceptors
+            implementation("io.ktor:ktor-client-okhttp:2.3.4")
 
             // Firebase Cloud Messaging (explicit versions for KMP DSL)
             implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
@@ -82,6 +82,9 @@ kotlin {
             // Koin for dependency injection
             implementation("io.insert-koin:koin-compose:1.1.0")
             implementation("io.insert-koin:koin-core:3.4.3")
+
+            // Coroutines (ClientCache uses Mutex)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             
             // Navigation for Compose Multiplatform
             implementation("cafe.adriel.voyager:voyager-navigator:1.0.0")
