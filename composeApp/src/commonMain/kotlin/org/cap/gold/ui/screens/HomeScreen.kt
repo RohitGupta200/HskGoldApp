@@ -72,6 +72,8 @@ fun HomeScreen(
     // Main content with bottom navigation
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         bottomBar = {
             BottomNavigationBar(
                 screens = screens,
@@ -116,7 +118,10 @@ private fun BottomNavigationBar(
     onNavigate: (String) -> Unit
 ) {
     
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
         screens.forEach { screen ->
             NavigationBarItem(
                 icon = { 

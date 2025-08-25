@@ -22,6 +22,9 @@ services:
           property: password
       - key: JWT_SECRET
         sync: false
+      - key: FIREBASE_WEB_API_KEY
+        # Set this in Render dashboard as an environment variable (do not commit the value)
+        sync: false
       - key: APP_BASE_URL
         value: https://capgold-server.onrender.com
       - key: APP_ENV

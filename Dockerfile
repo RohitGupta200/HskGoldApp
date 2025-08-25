@@ -26,6 +26,7 @@ COPY --from=build /workspace/server/build/install/server /app
 # Render provides PORT; default to 8080 for local
 ENV PORT=8080
 ENV JAVA_OPTS=""
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -Xms192m -Xmx384m -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -XX:ActiveProcessorCount=1 -XX:MaxGCPauseMillis=200"
 
 EXPOSE 8080
 

@@ -143,7 +143,7 @@ private fun Application.configureCORS() {
 private fun Application.configureSerialization() {
     install(ContentNegotiation) {
         json(Json {
-            prettyPrint = true
+            prettyPrint = false
             isLenient = true
             ignoreUnknownKeys = true
             encodeDefaults = true
