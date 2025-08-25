@@ -172,8 +172,11 @@ class TokenManager(
             // Propagate coroutine cancellation
             throw ce
         } catch (e: Exception) {
-            // If refresh fails, clear tokens to force reauthentication
-            clearTokens()
+            // If refresh fails, clear tokens to force reauthentication without re-locking
+            _tokens.value = null
+            try {
+                tokenStorage.clearTokens()
+            } catch (_: Exception) { /* ignore storage errors */ }
             return@withLock null
         }
     }
@@ -182,15 +185,13 @@ class TokenManager(
      * Gets a valid access token, refreshing it if necessary.
      * @return The access token, or null if not authenticated or refresh failed
      */
-    suspend fun getValidAccessToken(): String? = mutex.withLock {
-        val currentTokens = _tokens.value ?: return@withLock null
-        
-        // If token is expired or about to expire (within 5 minutes), refresh it
+    suspend fun getValidAccessToken(): String? {
+        // Read snapshot without locking
+        val currentTokens = tokens.value ?: return null
         val now = Clock.System.now().toEpochMilliseconds()
         val bufferTime = 5 * 60 * 1000 // 5 minutes in milliseconds
-        
-        return@withLock if (currentTokens.accessTokenExpiry - now <= bufferTime) {
-            // Token is expired or about to expire, try to refresh
+        return if (currentTokens.accessTokenExpiry - now <= bufferTime) {
+            // Token is expired or about to expire, try to refresh (refreshToken handles locking)
             refreshToken()?.accessToken
         } else {
             // Token is still valid

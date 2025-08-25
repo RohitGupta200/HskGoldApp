@@ -8,9 +8,12 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.cap.gold.models.*
 import org.cap.gold.repositories.OrderRepository
+import org.cap.gold.service.NotificationService
 import java.util.*
 
-class OrderController(private val orderRepository: OrderRepository) {
+class OrderController(private val orderRepository: OrderRepository,
+    private val notificationService: NotificationService
+) {
 
     // Serializable DTOs to avoid exposing UUIDs directly and to ensure proper JSON serialization
     @Serializable
@@ -89,6 +92,10 @@ class OrderController(private val orderRepository: OrderRepository) {
                         userName = req.userName,
                         totalAmount = req.totalAmount
                     )
+                )
+                notificationService.sendAdminBroadcastAsync(
+                    title = "An Order is Placed",
+                    body = req.userName + " has placed an order"
                 )
                 call.respond(HttpStatusCode.Created, createdOrder.toDto())
             }

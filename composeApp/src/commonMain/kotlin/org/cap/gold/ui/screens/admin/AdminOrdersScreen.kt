@@ -27,6 +27,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.cap.gold.ui.components.AppSearchBar
 import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.ui.screens.orders.OrderUiModel
 import org.cap.gold.ui.screens.orders.OrdersUiState
@@ -124,15 +125,14 @@ fun AdminOrdersScreenContent(
                 .padding(padding)
         ) {
             // Search Bar
-            OutlinedTextField(
+            AppSearchBar(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
+                onSearch = { /* handled by debounce */ },
+                placeholder = "Search",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                placeholder = { Text("Search orders") },
-                singleLine = true
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             when (uiState) {

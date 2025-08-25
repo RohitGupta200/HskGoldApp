@@ -10,11 +10,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.cap.gold.models.*
 import org.cap.gold.repositories.ProductRepository
+import org.cap.gold.service.NotificationService
 import java.util.*
 import java.time.LocalDateTime
 import java.util.Base64
 
-class ProductController(private val productRepository: ProductRepository) {
+class ProductController(
+    private val productRepository: ProductRepository,
+    private val notificationService: NotificationService
+) {
     
     fun Route.productRoutes() {
         // Request DTO aligned with client payload (incoming)
@@ -96,6 +100,22 @@ class ProductController(private val productRepository: ProductRepository) {
             val imageBase64: String? = null
         )
 
+        @Serializable
+        data class ProductResponse(
+            val id: String,
+            val name: String,
+            val description: String,
+            val price: Double,
+            val weight: Double,
+            val dimension: String,
+            val purity: String,
+            val maxQuantity: Int,
+            val category: String,
+            val createdAt: String,
+            val updatedAt: String,
+            val imageBase64: String? = null
+        )
+
         fun ApprovedProduct.toResponse(imageBytes: ByteArray? = null) = ApprovedProductResponse(
             id = id.toString(),
             name = name,
@@ -124,6 +144,21 @@ class ProductController(private val productRepository: ProductRepository) {
             createdAt = createdAt.toString(),
             updatedAt = updatedAt.toString(),
             imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
+        )
+
+        fun ProductWithImage.toResponse() = ProductResponse(
+            id = id.toString(),
+            name = name,
+            description = description,
+            price = price,
+            weight = weight,
+            dimension = dimension,
+            purity = purity,
+            maxQuantity = maxQuantity,
+            category = category,
+            createdAt = createdAt.toString(),
+            updatedAt = updatedAt.toString(),
+            imageBase64 = image
         )
 
         route("/products") {
@@ -223,6 +258,8 @@ class ProductController(private val productRepository: ProductRepository) {
                         isCreate = true
                     )
                     imageBytes?.let { productRepository.upsertImage(id, it) }
+                    // Fire and forget: notify admins that products have changed
+
                     call.respond(HttpStatusCode.Created, mapOf("id" to id.toString()))
                 }
 
@@ -297,6 +334,8 @@ class ProductController(private val productRepository: ProductRepository) {
                         isCreate = false
                     )
                     imageBytes?.let { productRepository.upsertImage(id, it) }
+                    // Fire and forget: notify admins that products have changed
+
                     call.respond(HttpStatusCode.OK, mapOf("id" to id.toString()))
                 }
             }
@@ -305,11 +344,13 @@ class ProductController(private val productRepository: ProductRepository) {
             route("/approved") {
                 // Get all approved products
                 get {
-                    val products = productRepository.getAllApprovedProducts()
+                    /*val products = productRepository.getAllApprovedProducts()
                     val response = products.map { p ->
                         val img = productRepository.getImage(p.id)
                         p.toResponse(img)
-                    }
+                    }*/
+                    val products = productRepository.getApprovedProductsWithImage()
+                    val response = products.map { it.toResponse() }
                     call.respond(response)
                 }
                 
@@ -331,6 +372,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         updatedAt = now
                     )
                     val createdProduct = productRepository.createApprovedProduct(newProduct)
+
                     call.respond(HttpStatusCode.Created, createdProduct.toResponse())
                 }
                 
@@ -370,6 +412,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         updatedAt = LocalDateTime.now()
                     )
                     if (productRepository.updateApprovedProduct(id, product)) {
+
                         call.respond(HttpStatusCode.OK, "Product updated successfully")
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
@@ -382,6 +425,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         ?: throw IllegalArgumentException("Invalid ID format")
                     
                     if (productRepository.deleteApprovedProduct(id)) {
+
                         call.respond(HttpStatusCode.OK, "Product deleted successfully")
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
@@ -393,11 +437,8 @@ class ProductController(private val productRepository: ProductRepository) {
             route("/unapproved") {
                 // Get all unapproved products
                 get {
-                    val products = productRepository.getAllUnapprovedProducts()
-                    val response = products.map { p ->
-                        val img = productRepository.getImage(p.id)
-                        p.toResponse(img)
-                    }
+                    val products = productRepository.getUnapprovedProductsWithImage()
+                    val response = products.map { it.toResponse() }
                     call.respond(response)
                 }
                 
@@ -432,6 +473,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         updatedAt = now
                     )
                     val createdProduct = productRepository.createUnapprovedProduct(newProduct)
+
                     call.respond(HttpStatusCode.Created, createdProduct.toResponse())
                 }
                 
@@ -458,6 +500,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         updatedAt = LocalDateTime.now()
                     )
                     if (productRepository.updateUnapprovedProduct(id, product)) {
+
                         call.respond(HttpStatusCode.OK, "Product updated successfully")
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
@@ -470,6 +513,7 @@ class ProductController(private val productRepository: ProductRepository) {
                         ?: throw IllegalArgumentException("Invalid ID format")
                     
                     if (productRepository.deleteUnapprovedProduct(id)) {
+
                         call.respond(HttpStatusCode.OK, "Product deleted successfully")
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "597433056354",
+    "project_id": "hsk-app-4cd3e",
+    "storage_bucket": "hsk-app-4cd3e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597433056354:android:12c11764c123d5d531e53b",
+        "android_client_info": {
+          "package_name": "org.cap.gold"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg9vK-XePsOGoNNmBWxyKE6SL-_FV3ekA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

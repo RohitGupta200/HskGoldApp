@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.screen.ScreenKey
 import kotlinx.coroutines.launch
 import org.cap.gold.auth.AuthService
 import org.cap.gold.auth.TokenManager
@@ -16,6 +15,8 @@ import org.cap.gold.ui.screens.LoginScreen
 import org.cap.gold.ui.theme.AppTheme
 import org.koin.compose.koinInject
 import org.cap.gold.ui.navigation.ProvideAppNavigator
+import cafe.adriel.voyager.core.screen.Screen
+import org.cap.gold.ui.screens.SplashScreen
 
 @Composable
 fun App() {
@@ -45,37 +46,38 @@ fun App() {
         ) {
             // Show a splash/loading screen while we determine auth state to avoid flashing Login
             if (isLoading) {
-                Box(Modifier.fillMaxSize()) {
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
-                }
+                SplashScreen(onTimeout = {})
             } else if (isAuthenticated) {
                 // Show main app content when authenticated inside a Voyager Navigator
-                cafe.adriel.voyager.navigator.Navigator(
-                    object : cafe.adriel.voyager.core.screen.Screen {
-                        override val key: ScreenKey = "home_screen"
-                        @Composable
-                        override fun Content() {
-                            ProvideAppNavigator {
-                                HomeScreen(
-                                    user = authState!!,
-                                    onLogout = {
-                                        coroutineScope.launch {
-                                            authService.signOut()
-                                            isAuthenticated = false
-
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                )
+                cafe.adriel.voyager.navigator.Navigator(HomeRootScreen)
             } else {
                 // Show login screen when not authenticated
                 LoginScreen(
                     onLoginSuccess = { isAuthenticated = true }
                 )
             }
+        }
+    }
+}
+
+// Stable root screen that does not capture non-serializable objects
+object HomeRootScreen : Screen {
+    @Composable
+    override fun Content() {
+        val authService: AuthService = koinInject()
+        val coroutineScope = rememberCoroutineScope()
+        val authState by authService.authState.collectAsState(initial = authService.currentUser)
+        // If somehow authState is null here, avoid crashing
+        val user = authState ?: return
+        ProvideAppNavigator {
+            HomeScreen(
+                user = user,
+                onLogout = {
+                    coroutineScope.launch {
+                        authService.signOut()
+                    }
+                }
+            )
         }
     }
 }

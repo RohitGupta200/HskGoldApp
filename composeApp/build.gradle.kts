@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization") version "2.2.0"
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
@@ -51,6 +52,10 @@ kotlin {
 
             // Ktor Android engine for app HttpClient
             implementation("io.ktor:ktor-client-android:2.3.4")
+
+            // Firebase Cloud Messaging (explicit versions for KMP DSL)
+            implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
+            implementation("com.google.firebase:firebase-common-ktx:21.0.0")
         }
         
         // iOS source sets

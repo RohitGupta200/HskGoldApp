@@ -33,7 +33,8 @@ import org.cap.gold.PlatformInfo
  */
 class KtorAuthService(
     private val baseUrl: String,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val deviceTokenProvider: DeviceTokenProvider
 ) : AuthService, CoroutineScope by CoroutineScope(Dispatchers.Default + SupervisorJob()) {
     // Server response shape: { user: User, tokens: { accessToken, refreshToken, expiresIn } }
     @kotlinx.serialization.Serializable
@@ -193,9 +194,10 @@ class KtorAuthService(
             }
             
             // Make the API call with manual status handling
+            val token = try { deviceTokenProvider.getDeviceToken() } catch (_: Exception) { null }
             val httpResponse = client.post("$baseUrl/api/auth/signin/email") {
                 contentType(ContentType.Application.Json)
-                setBody(EmailSignInRequest(email, password))
+                setBody(EmailSignInRequest(email = email, password = password, deviceToken = token))
             }
             val response: AuthResponse = if (httpResponse.status.value in 200..299) {
                 val parsed = httpResponse.safeParseAuth()

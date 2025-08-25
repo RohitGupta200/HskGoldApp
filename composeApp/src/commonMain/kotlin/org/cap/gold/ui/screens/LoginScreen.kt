@@ -122,7 +122,7 @@ fun LoginScreen(
         ) {
             BrandingImage(
                 modifier = Modifier
-                    .fillMaxWidth(0.6f)
+                    .fillMaxWidth(0.8f)
                     .padding(bottom = 32.dp)
             )
 

@@ -4,6 +4,7 @@ import org.cap.gold.auth.AuthService
 import org.cap.gold.auth.KtorAuthService
 import org.cap.gold.auth.TokenManager
 import org.cap.gold.auth.TokenStorage
+import org.cap.gold.auth.DeviceTokenProvider
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -18,6 +19,9 @@ val authModule = module {
         error("No TokenStorage implementation provided. Make sure to include the platform-specific module.")
     }
     
+    // Default DeviceTokenProvider; overridden on platforms (Android/iOS)
+    single<DeviceTokenProvider> { DeviceTokenProvider.Noop }
+    
     single {
         TokenManager(
             baseUrl = getProperty<String>("api.base.url"),
@@ -28,7 +32,8 @@ val authModule = module {
     single<AuthService> {
         KtorAuthService(
             baseUrl = getProperty("api.base.url"),
-            tokenManager = get()
+            tokenManager = get(),
+            deviceTokenProvider = get()
         )
     }
 }

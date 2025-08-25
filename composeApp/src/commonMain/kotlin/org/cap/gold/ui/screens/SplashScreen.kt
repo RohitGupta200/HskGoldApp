@@ -35,7 +35,7 @@ fun SplashScreen(
     modifier: Modifier = Modifier,
     timeoutMillis: Long = 2000L
 ) {
-    val scale = remember { Animatable(1f) }
+    val scale = remember { Animatable(0f) }
     
     LaunchedEffect(key1 = true) {
         // Scale up animation

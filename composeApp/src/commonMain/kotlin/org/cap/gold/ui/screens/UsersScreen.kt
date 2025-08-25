@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.cap.gold.ui.components.ErrorView
+import org.cap.gold.ui.components.AppSearchBar
 import org.cap.gold.ui.screens.admin.UserListItem
 import org.cap.gold.ui.screens.admin.UsersUiState
 import org.cap.gold.ui.screens.admin.UsersViewModel
@@ -67,35 +68,18 @@ fun UsersScreen(
             // Search bar
             var searchQuery by remember { mutableStateOf("") }
 
-            DockedSearchBar(
+            AppSearchBar(
+                value = searchQuery,
+                onValueChange = { query ->
+                    searchQuery = query
+                    onSearch(query)
+                },
+                onSearch = { onSearch(searchQuery) },
+                placeholder = "Search",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                inputField = {
-                    SearchBarDefaults.InputField(
-                        query = searchQuery,
-                        onQueryChange = { query ->
-                            searchQuery = query
-                            onSearch(query)
-                        },
-                        onSearch = { onSearch(searchQuery) },
-                        expanded = false,
-                        onExpandedChange = {},
-                        placeholder = { Text("Search users...") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = "Search users",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                    )
-                },
-                expanded = false,
-                onExpandedChange = {},
-            ) {
-                // Search suggestions would go here
-            }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
             when (val state = state) {
                 is UsersUiState.Loading -> {

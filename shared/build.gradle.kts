@@ -67,6 +67,10 @@ kotlin {
 
                 // AndroidX Security Crypto for EncryptedSharedPreferences
                 implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+                // Firebase Cloud Messaging for AndroidDeviceTokenProvider
+                implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
+                implementation("com.google.firebase:firebase-common-ktx:21.0.0")
             }
         }
 

@@ -44,4 +44,10 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        // Let framework save basic state, then clear to avoid serializing Voyager Screens
+        super.onSaveInstanceState(outState)
+        outState.clear()
+    }
 }

@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PhoneSignInRequest(
     val phoneNumber: String,
-    val password: String
+    val password: String,
+    val deviceToken: String? = null
 )
 
 /**
@@ -27,7 +28,8 @@ data class PhoneSignUpRequest(
 @Serializable
 data class EmailSignInRequest(
     val email: String,
-    val password: String
+    val password: String,
+    val deviceToken: String? = null
 )
 
 /**

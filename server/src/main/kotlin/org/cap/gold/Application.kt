@@ -45,10 +45,12 @@ import org.cap.gold.models.ProductsUnapproved
 import org.cap.gold.models.ProductImages
 import org.cap.gold.models.UnapprovedProduct
 import org.cap.gold.models.Categories
+import org.cap.gold.models.AdminUsers
 import org.cap.gold.repositories.OrderRepository
 import org.cap.gold.repositories.ProductRepository
 import org.cap.gold.repositories.CategoryRepository
 import org.cap.gold.repositories.UserRepository
+import org.cap.gold.service.NotificationService
 import org.cap.gold.service.OrderService
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -79,12 +81,15 @@ fun appModule(env: ApplicationEnvironment) = module {
     single { CategoryRepository() }
     single { OrderRepository() }
 
+    // Services
+    single { NotificationService() }
+
     // Controllers
-    single { AuthController(get(), get(), get()) }
-    single { ProductController(get()) }
+    single { AuthController(get(), get(), get(),get()) }
+    single { ProductController(get(), get()) }
     single { CategoryController(get()) }
     single { UserController(get()) }
-    single { OrderController(get()) }
+    single { OrderController(get(),get()) }
 }
 
 // Configure Firebase
@@ -304,7 +309,8 @@ fun Application.module() {
             ProductsUnapproved,
             Orders,
             Categories,
-            ProductImages
+            ProductImages,
+            AdminUsers
         )
     }
     

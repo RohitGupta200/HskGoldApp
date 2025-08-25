@@ -102,6 +102,27 @@ class ProductRepository {
                 .single()
         }
     }
+
+    suspend fun getApprovedProductsWithImage(): List<ProductWithImage> = transaction {
+        ProductsApproved
+            .leftJoin(ProductImages, { ProductsApproved.id }, { ProductImages.productId })
+            .slice(
+                ProductsApproved.id,
+                ProductsApproved.name,
+                ProductsApproved.description,
+                ProductsApproved.price,
+                ProductsApproved.weight,
+                ProductsApproved.dimension,
+                ProductsApproved.purity,
+                ProductsApproved.maxQuantity,
+                ProductsApproved.category,
+                ProductsApproved.createdAt,
+                ProductsApproved.updatedAt,
+                ProductImages.image
+            )
+            .selectAll()
+            .map { it.toProductWithImage() }
+    }
     
     // Read
     suspend fun getAllApprovedProducts(): List<ApprovedProduct> = transaction {
@@ -110,6 +131,27 @@ class ProductRepository {
     
     suspend fun getAllUnapprovedProducts(): List<UnapprovedProduct> = transaction {
         ProductsUnapproved.selectAll().map { it.toUnapprovedProduct() }
+    }
+
+    suspend fun getUnapprovedProductsWithImage(): List<ProductWithImage> = transaction {
+        ProductsUnapproved
+            .leftJoin(ProductImages, { ProductsUnapproved.id }, { ProductImages.productId })
+            .slice(
+                ProductsUnapproved.id,
+                ProductsUnapproved.name,
+                ProductsUnapproved.description,
+                ProductsUnapproved.price,
+                ProductsUnapproved.weight,
+                ProductsUnapproved.dimension,
+                ProductsUnapproved.purity,
+                ProductsUnapproved.maxQuantity,
+                ProductsUnapproved.category,
+                ProductsUnapproved.createdAt,
+                ProductsUnapproved.updatedAt,
+                ProductImages.image
+            )
+            .selectAll()
+            .map { it.toUnapprovedProductWithImage() }
     }
     
     suspend fun getApprovedProduct(id: UUID): ApprovedProduct? = transaction {

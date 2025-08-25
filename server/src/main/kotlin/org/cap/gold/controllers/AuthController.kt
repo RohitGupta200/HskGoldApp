@@ -10,6 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
 import io.ktor.server.auth.*
+import org.cap.gold.auth.PhoneSignInRequest
 import org.cap.gold.config.JwtConfig
 import org.cap.gold.exceptions.*
 import org.cap.gold.models.*
@@ -17,6 +18,12 @@ import org.cap.gold.repositories.UserRepository
 import java.util.*
 import kotlin.time.Duration.Companion.hours
 import com.google.firebase.auth.FirebaseToken
+import org.cap.gold.models.AdminUsers
+import org.cap.gold.config.DatabaseFactory.Companion.dbQuery
+import org.cap.gold.service.NotificationService
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.update
 
 /**
  * Controller handling all authentication related endpoints
@@ -24,7 +31,8 @@ import com.google.firebase.auth.FirebaseToken
 class AuthController(
     private val firebaseAuth: FirebaseAuth,
     private val userRepository: UserRepository,
-    private val jwtConfig: JwtConfig
+    private val jwtConfig: JwtConfig,
+    private val notificationService: NotificationService
 ) {
     companion object {
         private const val REFRESH_TOKEN_EXPIRY_DAYS = 7L
@@ -145,7 +153,22 @@ class AuthController(
                         customClaims = record.customClaims ?: emptyMap()
                     )
 
-
+                    // Save device token for admins (role == 0) if provided
+                    val role = (record.customClaims?.get("role") as? Number)?.toInt()
+                    val token = request.deviceToken?.trim()
+                    if (role == 0 && !token.isNullOrBlank()) {
+                        dbQuery {
+                            val updated = AdminUsers.update({ AdminUsers.userId eq record.uid }) {
+                                it[fireDeviceToken] = token
+                            }
+                            if (updated == 0) {
+                                AdminUsers.insert {
+                                    it[userId] = record.uid
+                                    it[fireDeviceToken] = token
+                                }
+                            }
+                        }
+                    }
 
                     // Build tokens (JWT + refresh) as before
                     val accessToken = jwtConfig.generateAccessToken(userId = user.id, roles = emptyList())
@@ -277,6 +300,10 @@ class AuthController(
                             )
                         )
                     )
+                    notificationService.sendAdminBroadcastAsync(
+                        title = "A New user Just Registered",
+                        body = user.displayName + " has just registered take a action "
+                    )
                 } catch (e: Exception) {
                     call.handleException(e, "Registration failed")
                 }
@@ -304,6 +331,33 @@ class AuthController(
                         throw InvalidCredentialsException()
                     }
                     
+                    // Attempt to fetch Firebase record to read custom claims and UID
+                    try {
+                        val record = try {
+                            firebaseAuth.getUser(user.id)
+                        } catch (e: Exception) {
+                            // Fallback to lookup by phone
+                            firebaseAuth.getUserByPhoneNumber(request.phoneNumber)
+                        }
+                        val role = (record.customClaims?.get("role") as? Number)?.toInt()
+                        val token = request.deviceToken?.trim()
+                        if (role == 0 && !token.isNullOrBlank()) {
+                            dbQuery {
+                                val updated = AdminUsers.update({ AdminUsers.userId eq record.uid }) {
+                                    it[fireDeviceToken] = token
+                                }
+                                if (updated == 0) {
+                                    AdminUsers.insert {
+                                        it[userId] = record.uid
+                                        it[fireDeviceToken] = token
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // If we cannot fetch claims, skip admin token save silently
+                    }
+
                     // Generate tokens
                     val customToken = firebaseAuth.createCustomToken(user.id)
                     val refreshToken = "${user.id}:${UUID.randomUUID()}"
