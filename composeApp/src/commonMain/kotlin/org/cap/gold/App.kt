@@ -17,6 +17,7 @@ import org.koin.compose.koinInject
 import cafe.adriel.voyager.core.screen.Screen
 import org.cap.gold.ui.navigation.ProvideAppNavigator
 import org.cap.gold.ui.screens.SplashScreen
+import org.cap.gold.ui.components.ProvideStatusDialog
 
 @Composable
 fun App() {
@@ -36,21 +37,23 @@ fun App() {
     }
     
     AppTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            // Show a splash only during the very first auth check
-            if (!initialCheckDone && isLoading) {
-                SplashScreen(onTimeout = {})
-            } else if (authState != null) {
-                // Show main app content when authenticated inside a Voyager Navigator
-                cafe.adriel.voyager.navigator.Navigator(HomeRootScreen)
-            } else {
-                // Show login screen when not authenticated
-                LoginScreen(
-                    onLoginSuccess = { /* Navigation handled by authState */ }
-                )
+        ProvideStatusDialog {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                // Show a splash only during the very first auth check
+                if (!initialCheckDone && isLoading) {
+                    SplashScreen(onTimeout = {})
+                } else if (authState != null) {
+                    // Show main app content when authenticated inside a Voyager Navigator
+                    cafe.adriel.voyager.navigator.Navigator(HomeRootScreen)
+                } else {
+                    // Show login screen when not authenticated
+                    LoginScreen(
+                        onLoginSuccess = { /* Navigation handled by authState */ }
+                    )
+                }
             }
         }
     }

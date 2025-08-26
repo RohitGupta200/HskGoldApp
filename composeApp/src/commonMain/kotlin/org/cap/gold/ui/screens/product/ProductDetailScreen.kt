@@ -28,6 +28,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.cap.gold.data.model.Product
 import org.cap.gold.model.User
 import org.cap.gold.ui.components.LoadingIndicator
@@ -35,6 +41,8 @@ import org.cap.gold.data.repository.CategoryRepository
 import org.cap.gold.data.network.NetworkResponse
 import org.koin.compose.koinInject
 import org.cap.gold.platform.rememberImagePicker
+import org.cap.gold.ui.components.LocalStatusDialogState
+import org.cap.gold.ui.components.StatusDialog
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -211,7 +219,8 @@ private fun QuantitySelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("Quantity")
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically
+        , modifier = Modifier.padding(horizontal = 10.dp)) {
             IconButton(onClick = onDecrement, enabled = quantity > 1) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrease")
             }
@@ -238,6 +247,7 @@ fun ProductDetailScreen(
     onProductUpdated: () -> Unit,
     onProductDeleted: () -> Unit
 ) {
+    val statusDialog = LocalStatusDialogState.current
     // Fetch categories for admin editing
     val categoryRepo = koinInject<CategoryRepository>()
     var categoryNames by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -336,7 +346,17 @@ fun ProductDetailScreen(
                     user = user,
                     onPlaceOrder = { phone ->
                         val customerName = user.name ?: user.displayName ?: ""
-                        viewModel.placeOrder(phone, customerName) { onOrderSuccess(it.id) }
+                        viewModel.placeOrder(phone, customerName) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(
+                                    success = true,
+                                    message = "Order Placed Successfully",
+                                    subMessage = "Our team will call you shortly"
+                                )
+                                delay(1000)
+                                statusDialog.hide()
+                            }
+                            onOrderSuccess(it.id) }
                     },
                     onProductDeleted = { }
                 )
@@ -365,6 +385,7 @@ private fun ProductContent(
     onPlaceOrder: (String) -> Unit,
     onProductDeleted: () -> Unit
 ) {
+    val statusDialog = LocalStatusDialogState.current
     // Admin can edit inline without toggling edit mode
     var activeType by remember { mutableStateOf(VariantType.APPROVED) }
     var approvedDraft by remember { mutableStateOf(product) }
@@ -572,7 +593,13 @@ private fun ProductContent(
                     viewModel.upsertBothFromUi(
                         approved = approvedToSend,
                         unapproved = unapprovedToSend,
-                        onSuccess = { /* refresh handled in VM */ }
+                        onSuccess = {
+                            statusDialog.show(
+                                success = true,
+                                message = "Product saved successfully",
+                                subMessage = null
+                            )
+                        }
                     )
                 },
                 modifier = Modifier
@@ -632,7 +659,6 @@ private fun ProductContent(
             ProductDetailRow("Dimensions", product.dimension)
             DottedDivider()
             ProductDetailRow("Category", product.category)
-            DottedDivider()
 
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -640,7 +666,7 @@ private fun ProductContent(
             
             // --- Order Section for non-admins ---
             if (!isAdmin) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 DottedDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 

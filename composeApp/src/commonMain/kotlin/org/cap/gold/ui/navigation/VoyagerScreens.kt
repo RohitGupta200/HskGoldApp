@@ -4,7 +4,13 @@ import androidx.compose.runtime.Composable
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.cap.gold.model.User
+import org.cap.gold.ui.screens.OrdersScreen
 import org.cap.gold.ui.screens.admin.ManageCategoriesScreen
 import org.cap.gold.ui.screens.order.OrderDetailScreen
 import org.cap.gold.ui.screens.order.OrderDetailViewModel
@@ -41,7 +47,14 @@ class ProductDetailVoyagerScreen(
             viewModel = viewModel,
             user = user,
             onBackClick = { navigator?.pop() },
-            onOrderSuccess = { navigator?.pop() },
+            onOrderSuccess = { navigator?.pop()
+                navigator?.push(object : Screen {
+                    override val key: ScreenKey = "orders_from_product_update"
+                    @Composable
+                    override fun Content() {
+                        OrdersScreen()
+                    }
+                })},
             onProductUpdated = { navigator?.pop() },
             onProductDeleted = { navigator?.pop() }
         )
