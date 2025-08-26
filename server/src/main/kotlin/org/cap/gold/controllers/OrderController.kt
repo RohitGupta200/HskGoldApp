@@ -33,6 +33,14 @@ class OrderController(private val orderRepository: OrderRepository,
     )
 
     @Serializable
+    data class PaginatedResponse<T>(
+        val data: List<T>,
+        val total: Long,
+        val page: Int,
+        val pageSize: Int
+    )
+
+    @Serializable
     data class CreateOrderRequestDto(
         val productId: String,
         val productName: String,
@@ -100,11 +108,29 @@ class OrderController(private val orderRepository: OrderRepository,
                 call.respond(HttpStatusCode.Created, createdOrder.toDto())
             }
 
-            // Get all orders (with optional status filter)
+            // Get all orders with pagination, search and filters (DB-backed)
             get {
-                val status = call.parameters["status"]?.let { OrderStatus.valueOf(it.uppercase()) }
-                val (orders, _) = orderRepository.searchOrders(status = status)
-                call.respond(orders.map { it.toDto() })
+                val qp = call.request.queryParameters
+                val page = qp["page"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+                val pageSize = qp["pageSize"]?.toIntOrNull()?.let { if (it <= 0) 30 else it } ?: 30
+                val query = qp["query"]?.takeIf { it.isNotBlank() }
+                val status = qp["status"]?.let { runCatching { OrderStatus.valueOf(it.uppercase()) }.getOrNull() }
+                val statusGroup = qp["statusGroup"]?.let { runCatching { OrderStatusGroup.valueOf(it.uppercase()) }.getOrNull() }
+
+                val (orders, total) = orderRepository.searchOrders(
+                    query = query,
+                    page = page,
+                    pageSize = pageSize,
+                    status = status,
+                    statusGroup = statusGroup
+                )
+                val dto = PaginatedResponse(
+                    data = orders.map { it.toDto() },
+                    total = total,
+                    page = page,
+                    pageSize = pageSize
+                )
+                call.respond(dto)
             }
 
             // Get order by ID

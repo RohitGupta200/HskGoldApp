@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
@@ -132,11 +133,29 @@ fun AdminOrdersScreenContent(
                 if (uiState.orders.isEmpty()) {
                     EmptyAdminOrdersView()
                 } else {
+                    val listState = rememberLazyListState()
+
+                    // Detect near end of list to trigger loading more (within last 3 items)
+                    val shouldLoadMore by remember {
+                        derivedStateOf {
+                            val total = listState.layoutInfo.totalItemsCount
+                            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+                            total > 0 && lastVisible >= total - 3
+                        }
+                    }
+
+                    LaunchedEffect(shouldLoadMore, uiState) {
+                        if (shouldLoadMore && hasMore && !isLoadingMore) {
+                            onLoadMore()
+                        }
+                    }
+
                     LazyColumn(
                         modifier = modifier
                             .fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        state = listState
                     ) {
                         items(uiState.orders) { order ->
                             AdminOrderItem(
@@ -145,24 +164,19 @@ fun AdminOrdersScreenContent(
                                 onClick = { onOrderClick(order.id) }
                             )
                         }
-                        item {
-                            if (hasMore) {
+                        // Loading footer while fetching next page
+                        if (isLoadingMore) {
+                            item {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 8.dp),
+                                        .padding(vertical = 12.dp),
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    OutlinedButton(onClick = onLoadMore, enabled = !isLoadingMore) {
-                                        if (isLoadingMore) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                        }
-                                        Text(if (isLoadingMore) "Loading…" else "Load more")
-                                    }
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
                                 }
                             }
                         }

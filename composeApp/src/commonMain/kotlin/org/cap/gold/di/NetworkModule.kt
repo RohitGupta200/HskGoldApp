@@ -57,6 +57,9 @@ val networkModule = module {
             install(Auth) {
                 bearer {
                     loadTokens {
+                        // Wait until tokens are loaded from storage on app start,
+                        // so the very first request includes Authorization.
+                        try { tokenManager.awaitInitialLoad() } catch (_: Throwable) {}
                         tokenManager.tokens.value?.let { t ->
                             BearerTokens(t.accessToken, t.refreshToken)
                         }

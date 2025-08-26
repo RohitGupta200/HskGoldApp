@@ -114,7 +114,7 @@ class AuthController(
     fun Route.authRoutes() {
         // Health check endpoint
         get("/health") {
-            call.respond(mapOf("status" to "ok"))
+            call.respond(mapOf("st" to "o"))
         }
 
         route("/auth") {
@@ -238,6 +238,56 @@ class AuthController(
                     )
                 } catch (e: Exception) {
                     call.handleException(e, "Failed to get current user")
+                }
+            }
+
+            // Refresh access token using a valid refresh token
+            post("/refresh") {
+                try {
+                    // Simple DTOs for refresh flow
+                    @kotlinx.serialization.Serializable
+                    data class RefreshTokenRequest(val refreshToken: String)
+                    @kotlinx.serialization.Serializable
+                    data class RefreshTokensResponse(
+                        val accessToken: String,
+                        val refreshToken: String,
+                        val expiresIn: Int
+                    )
+
+                    val body = call.receive<RefreshTokenRequest>()
+                    val provided = body.refreshToken.trim()
+                    if (provided.isBlank()) {
+                        call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing refresh token"))
+                        return@post
+                    }
+
+                    // Validate refresh token using JwtConfig
+                    val decoded = jwtConfig.validateToken(provided)
+                    if (decoded == null || decoded.getClaim("type").asString() != "refresh") {
+                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid or expired refresh token"))
+                        return@post
+                    }
+
+                    val userId = decoded.subject
+                    if (userId.isNullOrBlank()) {
+                        call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token subject"))
+                        return@post
+                    }
+
+                    // Mint new tokens (rotate refresh token)
+                    val accessToken = jwtConfig.generateAccessToken(userId = userId, roles = emptyList())
+                    val refreshToken = jwtConfig.generateRefreshToken(userId)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        RefreshTokensResponse(
+                            accessToken = accessToken,
+                            refreshToken = refreshToken,
+                            expiresIn = ACCESS_TOKEN_EXPIRY_HOURS.hours.inWholeSeconds.toInt()
+                        )
+                    )
+                } catch (e: Exception) {
+                    call.handleException(e, "Failed to refresh token")
                 }
             }
 

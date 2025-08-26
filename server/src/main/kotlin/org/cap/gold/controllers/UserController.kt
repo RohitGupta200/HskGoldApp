@@ -2,6 +2,8 @@ package org.cap.gold.controllers
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ListUsersPage
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -17,30 +19,45 @@ class UserController(
     fun Route.userRoutes() {
         route("/users") {
             get {
-                val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
-                val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 100
-
-                // Firebase Admin SDK uses cursor-based pagination; emulate page/pageSize
-                val users = mutableListOf<UserListItem>()
-                var currentPage: ListUsersPage = firebaseAuth.listUsers(null)
-                while (true) {
-                    currentPage.iterateAll().forEach { userRecord ->
-                        users += userRecord.toUserListItem()
-                    }
-                    if (!currentPage.hasNextPage() || users.size >= (page + 1) * pageSize) break
-                    currentPage = currentPage.getNextPage()
+                // Extract user id from JWT (subject claim)
+                val userId = call.principal<JWTPrincipal>()?.payload?.subject
+                // Optionally enforce presence (should always be present due to authenticate("auth-jwt"))
+                if (userId.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Missing or invalid token"))
+                    return@get
                 }
+                // Query params
+                val pageSize = (call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 100)
+                    .coerceIn(1, 1000) // Firebase max is 1000
+                val pageToken = call.request.queryParameters["pageToken"]?.toString()
+                val search = call.request.queryParameters["search"]?.toString() ?: ""
 
-                val fromIndex = (page * pageSize).coerceAtMost(users.size)
-                val toIndex = (fromIndex + pageSize).coerceAtMost(users.size)
-                val pageItems = users.subList(fromIndex, toIndex)
+                // Note: search is accepted but not applied server-side (client will handle it)
 
-                // Map to API model expected by client (shared org.cap.gold.model.User)
-                val apiUsers = pageItems.map { it.toApiUser() }
-                call.respond(HttpStatusCode.OK, apiUsers)
+                // Use Firebase Admin listUsers with pageToken
+                // Note: Java Admin SDK does not expose maxResults in the public API; it returns up to 1000 users per page.
+                val page: ListUsersPage = firebaseAuth.listUsers(pageToken)
+
+                val usersBatch = page.values.map { it.toUserListItem().toApiUser() }
+                val nextTokenRaw = page.nextPageToken
+                val nextToken = if (nextTokenRaw.isNullOrBlank()) null else nextTokenRaw
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    UsersPageResponse(
+                        users = usersBatch,
+                        nextPageToken = nextToken
+                    )
+                )
             }
 
             patch("/{id}/role") {
+                // Extract user id from JWT (subject claim)
+                val requesterId = call.principal<JWTPrincipal>()?.payload?.subject
+                if (requesterId.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Missing or invalid token"))
+                    return@patch
+                }
                 val userId = call.parameters["id"]
                 if (userId.isNullOrBlank()) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing user id"))
@@ -91,6 +108,12 @@ private data class UserListItem(
     val createdAt: Long,
     val lastLogin: Long,
     val role: Int
+)
+
+@Serializable
+private data class UsersPageResponse(
+    val users: List<ApiUser>,
+    val nextPageToken: String? = null
 )
 
 private fun com.google.firebase.auth.UserRecord.toUserListItem(): UserListItem {

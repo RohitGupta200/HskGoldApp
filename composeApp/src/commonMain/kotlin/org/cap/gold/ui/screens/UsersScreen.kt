@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.cap.gold.ui.components.ErrorView
 import org.cap.gold.ui.components.AppSearchBar
+import org.cap.gold.ui.screens.admin.AdminUserListItem
 import org.cap.gold.ui.screens.admin.UserListItem
 import org.cap.gold.ui.screens.admin.UsersUiState
 import org.cap.gold.ui.screens.admin.UsersViewModel
@@ -48,7 +50,7 @@ fun UsersScreen(
             )
         }
     }
-    val onRefreshClick: () -> Unit = {vm.loadUsers()}
+    val onRefreshClick: () -> Unit = { vm.loadUsers(reset = true) }
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
@@ -72,9 +74,8 @@ fun UsersScreen(
                 value = searchQuery,
                 onValueChange = { query ->
                     searchQuery = query
-                    onSearch(query)
                 },
-                onSearch = { onSearch(searchQuery) },
+                onSearch = { vm.loadUsers(reset = true, search = searchQuery) },
                 placeholder = "Search",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -109,13 +110,31 @@ fun UsersScreen(
                                 .weight(1f)
                         )
                     } else {
+                        val listState = rememberLazyListState()
+
+                        // Determine when to load more: when last visible item is within 3 of the end
+                        val shouldLoadMore by remember {
+                            derivedStateOf {
+                                val total = listState.layoutInfo.totalItemsCount
+                                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+                                total > 0 && lastVisible >= total - 3
+                            }
+                        }
+
+                        LaunchedEffect(shouldLoadMore, state.users.size) {
+                            if (shouldLoadMore && vm.canLoadMore()) {
+                                vm.loadMore()
+                            }
+                        }
+
                         LazyColumn(
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            state = listState
                         ) {
                             item { Spacer(modifier = Modifier.height(8.dp)) }
-                            items(state.users) { user ->
+                            items(state.users, key = { it.id }) { user ->
                                 UserListItem(
                                     user = user,
                                     onRoleChange = { userId, newRole ->
@@ -130,7 +149,21 @@ fun UsersScreen(
                                     }
                                 )
                             }
-                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                            // Loading footer
+                            if (vm.isLoadingMore) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                            } else {
+                                item { Spacer(modifier = Modifier.height(8.dp)) }
+                            }
                         }
                     }
                 }

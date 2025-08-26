@@ -20,7 +20,7 @@ class JwtConfig(config: ApplicationConfig) {
     // Access token expiration (default: 15 minutes)
     private val accessTokenExpiration = parseDurationMillis(
         config.propertyOrNull("ktor.security.jwt.accessTokenExpiration")?.getString(),
-        15 * 60 * 1000L
+        150 * 60 * 1000L
     )
     
     // Refresh token expiration (default: 7 days)

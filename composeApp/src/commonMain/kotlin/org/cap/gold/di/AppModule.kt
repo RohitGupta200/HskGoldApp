@@ -6,6 +6,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.cap.gold.ui.screens.admin.AdminOrdersViewModel
+import org.cap.gold.ui.screens.admin.UsersViewModel
 import org.cap.gold.ui.screens.orders.OrdersViewModel
 import org.cap.gold.ui.screens.product.ProductDetailViewModel
 import org.cap.gold.ui.screens.order.OrderDetailViewModel
@@ -49,6 +50,7 @@ fun initKoin(
 val uiViewModelModule = module {
     // ViewModels
     single { AdminOrdersViewModel() }
+    single { UsersViewModel(get()) }
     single { OrdersViewModel() }
     single { OrderDetailViewModel() }
     factory { (productId: String, isAdmin: Boolean, isApprovedUser: Boolean) ->

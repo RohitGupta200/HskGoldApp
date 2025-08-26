@@ -13,6 +13,8 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.UserIdPrincipal
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.calllogging.*
@@ -222,28 +224,31 @@ private fun Application.configureRouting(authController: AuthController) {
     routing {
         // Health check endpoint
         get("/health") {
-            call.respond(mapOf("status" to "UP"))
+            call.respond(mapOf("st" to "U"))
         }
 
         route("/api") {
-            // Product routes
-            val productController: ProductController by inject()
-            productController.apply { this@route.productRoutes() }
-
-            // Category routes
-            val categoryController: CategoryController by inject()
-            categoryController.apply { this@route.categoryRoutes() }
-
             // Auth routes mounted under /api/auth
             authController.apply { this@route.authRoutes() }
 
-            // Users routes mounted under /api/users
-            val userController: UserController by inject()
-            userController.apply { this@route.userRoutes() }
+            // Protected routes
+            authenticate("auth-jwt") {
+                // Product routes
+                val productController: ProductController by inject()
+                productController.apply { this@authenticate.productRoutes() }
 
-            // Orders routes mounted under /api/orders
-            val orderController: OrderController by inject()
-            orderController.apply { this@route.orderRoutes() }
+                // Category routes
+                val categoryController: CategoryController by inject()
+                categoryController.apply { this@authenticate.categoryRoutes() }
+
+                // Users routes
+                val userController: UserController by inject()
+                userController.apply { this@authenticate.userRoutes() }
+
+                // Orders routes
+                val orderController: OrderController by inject()
+                orderController.apply { this@authenticate.orderRoutes() }
+            }
         }
     }
 }
@@ -322,12 +327,28 @@ fun Application.module() {
     
     // Get dependencies
     val authController: AuthController by inject()
+    val jwtConfig: JwtConfig by inject()
     
     // Configure server features
     configureCORS()
     configureSerialization()
     configureStatusPages()
     configureMonitoring()
+    // Authentication: protect API with server JWTs
+    install(Authentication) {
+        jwt("auth-jwt") {
+            realm = "capgold"
+            verifier(jwtConfig.verifier)
+            validate { credentials ->
+                // Accept only access tokens (optional check)
+                val type = credentials.payload.getClaim("type").asString()
+                if (type == null || type == "access") JWTPrincipal(credentials.payload) else null
+            }
+            challenge { _, _ ->
+                call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Invalid or missing token"))
+            }
+        }
+    }
     
     // Configure routing
     configureRouting(authController)

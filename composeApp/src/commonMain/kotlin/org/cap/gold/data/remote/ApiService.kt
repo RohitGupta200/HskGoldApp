@@ -92,7 +92,7 @@ class ProductApiServiceImpl(
     
     override suspend fun getApprovedProducts(): List<Product> {
         val key = "GET:/api/products/approved"
-        val ttlSeconds = 300L // 5 minutes
+        val ttlSeconds = 10L // 5 minutes
         // Try cached JSON first
         val cached = ClientCache.getFresh(key)
         if (cached != null) {

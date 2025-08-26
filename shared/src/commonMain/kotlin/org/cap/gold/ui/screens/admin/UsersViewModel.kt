@@ -1,4 +1,4 @@
-package org.cap.gold.ui.screens.admin
+package org.cap.gold.ui.screens.admin.legacy
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,17 +12,17 @@ import org.cap.gold.util.Result
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-sealed interface UsersUiState {
-    data object Loading : UsersUiState
-    data class Success(val users: List<User>) : UsersUiState
-    data class Error(val message: String) : UsersUiState
+sealed interface LegacyUsersUiState {
+    data object Loading : LegacyUsersUiState
+    data class Success(val users: List<User>) : LegacyUsersUiState
+    data class Error(val message: String) : LegacyUsersUiState
 }
 
-class UsersViewModel : KoinComponent {
+class LegacyUsersViewModel : KoinComponent {
     private val userRepository: UserRepository by inject()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
     
-    var uiState: UsersUiState by mutableStateOf(UsersUiState.Loading)
+    var uiState: LegacyUsersUiState by mutableStateOf(LegacyUsersUiState.Loading)
         private set
     
     private var allUsers: List<User> = emptyList()
@@ -33,20 +33,20 @@ class UsersViewModel : KoinComponent {
     
     fun loadUsers() {
         viewModelScope.launch {
-            uiState = UsersUiState.Loading
+            uiState = LegacyUsersUiState.Loading
             try {
                 when (val result = userRepository.getUsers()) {
                     is Result.Success -> {
                         allUsers = result.data
-                        uiState = UsersUiState.Success(allUsers)
+                        uiState = LegacyUsersUiState.Success(allUsers)
                     }
                     is Result.Error -> {
-                        uiState = UsersUiState.Error(result.message)
+                        uiState = LegacyUsersUiState.Error(result.message)
                     }
                     is Result.Loading -> { /* no-op */ }
                 }
             } catch (e: Exception) {
-                uiState = UsersUiState.Error(e.message ?: "An unexpected error occurred")
+                uiState = LegacyUsersUiState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
@@ -61,31 +61,30 @@ class UsersViewModel : KoinComponent {
                             if (user.id == userId) user.copy(role = newRole)
                             else user
                         }
-                        uiState = UsersUiState.Success(allUsers)
+                        uiState = LegacyUsersUiState.Success(allUsers)
                         onSuccess()
                     }
                     is Result.Error -> {
-                        // Could show an error message
-                        uiState = UsersUiState.Error(result.message)
+                        uiState = LegacyUsersUiState.Error(result.message)
                     }
                     is Result.Loading -> { /* no-op */ }
                 }
             } catch (e: Exception) {
-                uiState = UsersUiState.Error(e.message ?: "Failed to update user role")
+                uiState = LegacyUsersUiState.Error(e.message ?: "Failed to update user role")
             }
         }
     }
     
     fun searchUsers(query: String) {
         if (query.isBlank()) {
-            uiState = UsersUiState.Success(allUsers)
+            uiState = LegacyUsersUiState.Success(allUsers)
         } else {
             val filtered = allUsers.filter { user ->
                 user.phoneNumber.contains(query, ignoreCase = true) ||
                 user.displayName?.contains(query, ignoreCase = true) == true ||
                 user.email?.contains(query, ignoreCase = true) == true
             }
-            uiState = UsersUiState.Success(filtered)
+            uiState = LegacyUsersUiState.Success(filtered)
         }
     }
 }

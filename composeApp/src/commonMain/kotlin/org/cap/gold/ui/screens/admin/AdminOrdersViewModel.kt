@@ -28,7 +28,7 @@ class AdminOrdersViewModel : KoinComponent {
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
 
     private var currentPage = 0
-    private val pageSize = 20
+    private val pageSize = 10
     private var currentQuery: String? = null
 
     private fun formatDateTime(millis: Long): String {

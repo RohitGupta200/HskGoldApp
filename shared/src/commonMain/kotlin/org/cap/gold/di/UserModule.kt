@@ -2,7 +2,6 @@ package org.cap.gold.di
 
 import org.cap.gold.data.repository.UserRepository
 import org.cap.gold.data.repository.UserRepositoryImpl
-import org.cap.gold.ui.screens.admin.UsersViewModel
 import org.koin.dsl.module
 
 /**
@@ -11,6 +10,4 @@ import org.koin.dsl.module
 val userModule = module {
     // User Repository
     single<UserRepository> { UserRepositoryImpl() }
-    // Users ViewModel
-    factory { UsersViewModel() }
 }
