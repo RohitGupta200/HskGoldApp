@@ -37,14 +37,17 @@ class AndroidTokenStorage(
 
     override suspend fun saveTokens(tokens: TokenManager.Tokens) = withContext(Dispatchers.IO) {
         try {
+            // Use commit() to ensure data is flushed before potential process kill
             prefs.edit()
                 .putString(KEY_ACCESS_TOKEN, tokens.accessToken)
                 .putString(KEY_REFRESH_TOKEN, tokens.refreshToken)
                 .putLong(KEY_ACCESS_TOKEN_EXPIRY, tokens.accessTokenExpiry)
-                .putString(KEY_USER_ID, tokens.userId) // Save userId
-                .apply()
+                .putString(KEY_USER_ID, tokens.userId)
+                .commit()
+            Unit
         } catch (e: Exception) {
             e.printStackTrace()
+            Unit
         }
     }
 
@@ -63,12 +66,12 @@ class AndroidTokenStorage(
                     userId = userId
                 )
             } else {
-                clearTokens()
+                // On incomplete/partial read, return null but do NOT clear storage here.
                 null
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            clearTokens()
+            // On read error, return null; do not clear persistently stored values.
             null
         }
     }

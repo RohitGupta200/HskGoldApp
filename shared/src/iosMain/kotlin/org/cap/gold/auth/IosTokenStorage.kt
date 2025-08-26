@@ -78,13 +78,12 @@ class IosTokenStorage : TokenStorage {
                     userId = userId
                 )
             } else {
-                // Clean up if data is corrupted
-                clearTokens()
+                // On incomplete/partial read, return null but do NOT clear storage here.
                 null
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            clearTokens()
+            // On read error, return null; do not clear persistent storage.
             null
         }
     }

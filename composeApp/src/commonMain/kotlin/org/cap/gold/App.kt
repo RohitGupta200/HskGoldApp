@@ -14,8 +14,8 @@ import org.cap.gold.ui.screens.HomeScreen
 import org.cap.gold.ui.screens.LoginScreen
 import org.cap.gold.ui.theme.AppTheme
 import org.koin.compose.koinInject
-import org.cap.gold.ui.navigation.ProvideAppNavigator
 import cafe.adriel.voyager.core.screen.Screen
+import org.cap.gold.ui.navigation.ProvideAppNavigator
 import org.cap.gold.ui.screens.SplashScreen
 
 @Composable
@@ -24,19 +24,15 @@ fun App() {
     val authService: AuthService = koinInject()
     val coroutineScope = rememberCoroutineScope()
     
-    // Track authentication state
-    var isAuthenticated by remember { mutableStateOf(authService.currentUser != null) }
+    // Track authentication state directly from service
     val authState by authService.authState.collectAsState(initial = authService.currentUser)
     val isLoading by authService.isLoading.collectAsState()
     
-    // Check auth state when app starts
+    // Only show splash during the initial auth check
+    var initialCheckDone by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         authService.checkAuthState()
-    }
-    
-    // Update UI when auth state changes
-    LaunchedEffect(authState) {
-        isAuthenticated = authState != null
+        initialCheckDone = true
     }
     
     AppTheme {
@@ -44,16 +40,16 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            // Show a splash/loading screen while we determine auth state to avoid flashing Login
-            if (isLoading) {
+            // Show a splash only during the very first auth check
+            if (!initialCheckDone && isLoading) {
                 SplashScreen(onTimeout = {})
-            } else if (isAuthenticated) {
+            } else if (authState != null) {
                 // Show main app content when authenticated inside a Voyager Navigator
                 cafe.adriel.voyager.navigator.Navigator(HomeRootScreen)
             } else {
                 // Show login screen when not authenticated
                 LoginScreen(
-                    onLoginSuccess = { isAuthenticated = true }
+                    onLoginSuccess = { /* Navigation handled by authState */ }
                 )
             }
         }

@@ -25,6 +25,7 @@ import kotlinx.serialization.serializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.cap.gold.auth.model.AuthResponse
+import org.cap.gold.PlatformInfo
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -77,7 +78,10 @@ class TokenManager(
             // Start observing token changes
             tokenStorage.observeTokens()
                 .collect { newTokens ->
-                    _tokens.value = newTokens
+                    // Ignore null emissions to avoid transient clears on multi-key writes
+                    if (newTokens != null) {
+                        _tokens.value = newTokens
+                    }
                 }
         }
     }
@@ -172,11 +176,8 @@ class TokenManager(
             // Propagate coroutine cancellation
             throw ce
         } catch (e: Exception) {
-            // If refresh fails, clear tokens to force reauthentication without re-locking
-            _tokens.value = null
-            try {
-                tokenStorage.clearTokens()
-            } catch (_: Exception) { /* ignore storage errors */ }
+            // If refresh fails, do not clear tokens here; allow caller to retry or handle 401
+            if (PlatformInfo.isDebug) println("[TokenManager] refresh failed: ${e.message}")
             return@withLock null
         }
     }
@@ -189,7 +190,7 @@ class TokenManager(
         // Read snapshot without locking
         val currentTokens = tokens.value ?: return null
         val now = Clock.System.now().toEpochMilliseconds()
-        val bufferTime = 5 * 60 * 1000 // 5 minutes in milliseconds
+        val bufferTime = 30 * 1000 // 30 seconds buffer
         return if (currentTokens.accessTokenExpiry - now <= bufferTime) {
             // Token is expired or about to expire, try to refresh (refreshToken handles locking)
             refreshToken()?.accessToken
