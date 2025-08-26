@@ -1,6 +1,9 @@
 package org.cap.gold.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
@@ -16,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -95,6 +99,7 @@ fun LoginScreen(
                     is AuthResult.Success -> {
                         // Navigation handled by App.kt observing authState
                     }
+
                     is AuthResult.Error -> errorMessage = result.message ?: "Authentication failed"
                     AuthResult.Loading -> {}
                 }
@@ -111,7 +116,22 @@ fun LoginScreen(
         }
     }
 
+
     Scaffold {
+        Column (
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            BrandingImage(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .padding(bottom = 32.dp),
+
+                )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -120,37 +140,19 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            BrandingImage(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .padding(bottom = 32.dp)
-            )
+
 
             // Error message
-            errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                )
-            }
+
 
             // App logo or title
             Text(
-                text = if (isSignUp) "Create Your Account" else "Welcome Back",
+                text = if (isSignUp) "Create Your Account" else "Login to your account",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
+                color = MaterialTheme.colorScheme.primary
             )
 
-            Text(
-                text = if (isSignUp) "Sign up to get started" else "Sign in to continue",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
 
             // Email field
             OutlinedTextField(
@@ -160,7 +162,7 @@ fun LoginScreen(
                 singleLine = true,
                 enabled = !isLoading,
                 isError = errorMessage != null,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
@@ -184,7 +186,7 @@ fun LoginScreen(
                         Icon(icon, contentDescription = "Toggle password visibility")
                     }
                 },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = if (isSignUp) ImeAction.Next else ImeAction.Done
                 ),
@@ -201,7 +203,7 @@ fun LoginScreen(
                     label = { Text("Full Name") },
                     singleLine = true,
                     enabled = !isLoading,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
                     ),
@@ -220,7 +222,7 @@ fun LoginScreen(
                     singleLine = true,
                     enabled = !isLoading,
                     isError = errorMessage != null,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Phone,
                         imeAction = ImeAction.Done
                     ),
@@ -237,14 +239,40 @@ fun LoginScreen(
                 onClick = { handleAuth() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .background(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    ),
                 enabled = !isLoading && email.isNotBlank() && password.isNotBlank() && (!isSignUp || (signupPhone.isNotBlank() && signupName.isNotBlank()))
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text(if (isSignUp) "Create Account" else "Sign In")
+                    Text(if (isSignUp) "Create Account" else "Login", color = MaterialTheme.colorScheme.background)
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            errorMessage?.let { message ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .background(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(8.dp)),
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp)
+
+                    )
+                }
+
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -255,7 +283,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    if (isSignUp) "Already have an account? Sign in"
+                    if (isSignUp) "Already have an account? Login"
                     else "Don't have an account? Sign up",
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -322,3 +350,5 @@ fun LoginScreenPreview() {
         )
     }
 }
+
+

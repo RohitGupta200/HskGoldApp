@@ -100,22 +100,6 @@ fun AdminOrdersScreenContent(
         topBar = {
             TopAppBar(
                 title = { Text("All Orders") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onRefresh) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = "Refresh"
-                        )
-                    }
-                }
             )
         }
     ) { padding ->
