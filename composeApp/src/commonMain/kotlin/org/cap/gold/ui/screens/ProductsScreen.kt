@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -18,9 +20,16 @@ import org.cap.gold.ui.navigation.LocalAppNavigator
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import org.cap.gold.data.model.Product
 import org.cap.gold.data.network.NetworkResponse
 import org.cap.gold.data.repository.ProductRepository
+import org.cap.gold.data.remote.ProductApiService
 import org.cap.gold.model.User
 import org.cap.gold.ui.components.BrandingImage
 import org.cap.gold.ui.components.ProductItem
@@ -29,8 +38,10 @@ import org.cap.gold.ui.screens.product.ProductDetailViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalEncodingApi::class)
 @Composable
 fun ProductsScreen(
     user: User,
@@ -47,11 +58,15 @@ fun ProductsScreen(
     }
 
     val productRepository = koinInject<ProductRepository> { parametersOf(userRole) }
+    val apiService = koinInject<ProductApiService>()
     var searchQuery by remember { mutableStateOf("") }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val gridState = rememberLazyGridState()
+    val imageSemaphore = remember { Semaphore(3) }
+    val inFlight = remember { mutableSetOf<String>() }
 
     // Load products when the screen is first shown or when userRole changes
     LaunchedEffect(userRole) {
@@ -81,6 +96,31 @@ fun ProductsScreen(
             errorMessage = "Failed to load products: ${e.message}"
             isLoading = false
         }
+    }
+
+    // Fetch images only for visible items with concurrency limit (3)
+    LaunchedEffect(gridState, products) {
+        snapshotFlow { gridState.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String } }
+            .collectLatest { visibleKeys ->
+                val missingVisibleIds = visibleKeys.filter { key ->
+                    products.any { it.id == key && it.imageBase64.isNullOrEmpty() && !inFlight.contains(key) }
+                }
+                missingVisibleIds.forEach { id ->
+                    inFlight.add(id)
+                    coroutineScope.launch(Dispatchers.Default) {
+                        imageSemaphore.withPermit {
+                            val bytes = runCatching { apiService.getProductImage(id) }.getOrNull()
+                            if (bytes != null) {
+                                val b64 = Base64.encode(bytes)
+                                withContext(Dispatchers.Main) {
+                                    products = products.map { if (it.id == id) it.copy(imageBase64 = b64) else it }
+                                }
+                            }
+                            inFlight.remove(id)
+                        }
+                    }
+                }
+            }
     }
 
     // Filter and group products by category
@@ -229,10 +269,11 @@ fun ProductsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                state = gridState
             ) {
                 filteredProducts.forEach { (category, categoryProducts) ->
-                    item(span = { GridItemSpan(2) }) {
+                    item(span = { GridItemSpan(2) }, key = "header-$category") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -254,7 +295,7 @@ fun ProductsScreen(
                         }
                     }
 
-                    items(categoryProducts) { product ->
+                    items(categoryProducts, key = { it.id }) { product ->
                         ProductItem(
                             product = product,
                             onProductClick = onProductClick,

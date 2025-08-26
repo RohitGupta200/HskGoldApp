@@ -53,6 +53,13 @@ interface Product {
 
 }
 
+interface ProductForList{
+    val id: UUID
+    val name: String
+    val price: Double
+    val category: String
+}
+
 // Data classes for each product type
 data class ApprovedProduct(
     override val id: UUID,
@@ -83,20 +90,12 @@ data class UnapprovedProduct(
 ) : Product
 
 
-data class ProductWithImage(
+data class ProductWithOutImageForList(
     override val id: UUID,
     override val name: String,
-    override val description: String,
     override val price: Double,
-    override val weight: Double,
-    override val dimension: String,
-    override val purity: String,
-    override val maxQuantity: Int,
     override val category: String,
-    override val createdAt: LocalDateTime,
-    override val updatedAt: LocalDateTime,
-    val image: String?
-) : Product
+) : ProductForList
 
 // Extension functions to convert from ResultRow to data classes
 fun ResultRow.toApprovedProduct() = ApprovedProduct(
@@ -127,32 +126,18 @@ fun ResultRow.toUnapprovedProduct() = UnapprovedProduct(
     updatedAt = this[ProductsUnapproved.updatedAt]
 )
 
-fun ResultRow.toProductWithImage() = ProductWithImage(
+fun ResultRow.toProductWithOutImage() = ProductWithOutImageForList(
     id = this[ProductsApproved.id].value,
     name = this[ProductsApproved.name],
-    description = this[ProductsApproved.description],
     price = this[ProductsApproved.price],
-    weight = this[ProductsApproved.weight],
-    dimension = this[ProductsApproved.dimension],
-    purity = this[ProductsApproved.purity],
-    maxQuantity = this[ProductsApproved.maxQuantity],
     category = this[ProductsApproved.category],
-    createdAt = this[ProductsApproved.createdAt],
-    updatedAt = this[ProductsApproved.updatedAt],
-    image = this[ProductImages.image]?.bytes?.let { Base64.getEncoder().encodeToString(it) }
+
 )
 
-fun ResultRow.toUnapprovedProductWithImage() = ProductWithImage(
+fun ResultRow.toUnapprovedProductWithOutImage() = ProductWithOutImageForList(
     id = this[ProductsUnapproved.id].value,
     name = this[ProductsUnapproved.name],
-    description = this[ProductsUnapproved.description],
     price = this[ProductsUnapproved.price],
-    weight = this[ProductsUnapproved.weight],
-    dimension = this[ProductsUnapproved.dimension],
-    purity = this[ProductsUnapproved.purity],
-    maxQuantity = this[ProductsUnapproved.maxQuantity],
     category = this[ProductsUnapproved.category],
-    createdAt = this[ProductsUnapproved.createdAt],
-    updatedAt = this[ProductsUnapproved.updatedAt],
-    image = this[ProductImages.image]?.bytes?.let { Base64.getEncoder().encodeToString(it) }
+
 )

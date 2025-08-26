@@ -16,3 +16,13 @@ data class Product(
     val dimension: String = "",
     val maxQuantity: Int = 1
 )
+
+@Serializable
+data class ListProduct(
+    val id: String,
+    val name: String = "",
+    val price: Double,
+    val category: String = "",
+
+)
+

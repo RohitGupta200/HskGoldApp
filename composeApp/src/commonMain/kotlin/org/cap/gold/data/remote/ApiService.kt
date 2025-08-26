@@ -4,19 +4,22 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import org.cap.gold.data.model.Product
-import org.cap.gold.data.model.Order
-import org.cap.gold.data.model.OrderStatus
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
-import kotlinx.serialization.Serializable
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.*
 import io.ktor.http.content.*
-import kotlinx.serialization.json.Json
+import io.ktor.util.*
+import io.ktor.client.plugins.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.cap.gold.cache.ClientCache
+import org.cap.gold.data.model.ListProduct
+import org.cap.gold.data.model.Order
+import org.cap.gold.data.model.OrderStatus
+import org.cap.gold.data.model.Product
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 @Serializable
 data class SimpleProductResponse(
@@ -35,6 +38,14 @@ data class SimpleProductResponse(
 )
 
 @Serializable
+data class ListProductResponse(
+    val id: String? = null,
+    val name: String = "",
+    val price: Double? = 0.0,
+    val category: String? = "",
+)
+
+@Serializable
 data class BothVariantsResponse(
     val id: String,
     val approved: SimpleProductResponse? = null,
@@ -49,6 +60,7 @@ interface ProductApiService {
     suspend fun getUnapprovedProducts(): List<Product>
     suspend fun getProductById(id: String): Product
     suspend fun getUnapprovedProductById(id: String): Product
+    suspend fun getProductImage(id: String): ByteArray?
     suspend fun createApprovedProduct(product: Product): Product
     suspend fun createUnapprovedProduct(product: Product): Product
     suspend fun updateApprovedProduct(id: String, product: Product): Product
@@ -98,7 +110,7 @@ class ProductApiServiceImpl(
         if (cached != null) {
             return try {
                 Json { ignoreUnknownKeys = true }
-                    .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), cached)
+                    .decodeFromString(ListSerializer(ListProductResponse.serializer()), cached)
                     .map { it.toProduct(it.id ?: "") }
             } catch (_: Exception) {
                 // fall through to network
@@ -111,7 +123,7 @@ class ProductApiServiceImpl(
                 // Store in cache
                 ClientCache.put(key, text, ttlSeconds)
                 Json { ignoreUnknownKeys = true }
-                    .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), text)
+                    .decodeFromString(ListSerializer(ListProductResponse.serializer()), text)
                     .map { it.toProduct(it.id ?: "") }
             }
         }
@@ -121,18 +133,39 @@ class ProductApiServiceImpl(
         }.bodyAsText()
         ClientCache.put(key, text, ttlSeconds)
         return Json { ignoreUnknownKeys = true }
-            .decodeFromString(ListSerializer(SimpleProductResponse.serializer()), text)
+            .decodeFromString(ListSerializer(ListProductResponse.serializer()), text)
             .map { it.toProduct(it.id ?: "") }
     }
 
     override suspend fun getUnapprovedProducts(): List<Product> =
-        client.get("api/products/unapproved").body<List<SimpleProductResponse>>().map { it.toProduct(it.id ?: "") }
+        client.get("api/products/unapproved").body<List<ListProductResponse>>().map { it.toProduct(it.id ?: "") }
 
     override suspend fun getProductById(id: String): Product =
         client.get("api/products/approved/$id").body<SimpleProductResponse>().toProduct(id)
 
     override suspend fun getUnapprovedProductById(id: String): Product =
         client.get("api/products/unapproved/$id").body<SimpleProductResponse>().toProduct(id)
+
+    override suspend fun getProductImage(id: String): ByteArray? {
+        val key = "GET:/api/products/$id/image"
+        val ttlSeconds = 3600L // 60 minutes
+        // Cache hit
+        val cached = ClientCache.getFresh(key)
+        if (cached != null) {
+            return try { cached.decodeBase64Bytes() } catch (_: Throwable) { null }
+        }
+        // Fetch from server and handle non-2xx via exceptions
+        return try {
+            val resp: HttpResponse = client.get("api/products/$id/image")
+            val bytes: ByteArray = resp.body()
+            ClientCache.put(key, bytes.encodeBase64(), ttlSeconds)
+            bytes
+        } catch (e: ClientRequestException) { // 4xx
+            if (e.response.status == HttpStatusCode.NotFound) null else null
+        } catch (e: ServerResponseException) { // 5xx
+            null
+        }
+    }
 
     @Serializable
     private data class ProductPayload(
@@ -158,6 +191,13 @@ class ProductApiServiceImpl(
         purity = this.purity,
         dimension = this.dimension,
         maxQuantity = this.maxQuantity
+    )
+
+    private fun ListProductResponse.toProduct(id: String): Product = Product(
+        id = id,
+        name = this.name,
+        price = this.price?:0.0,
+        category = this.category?:"Uncategorized",
     )
 
     

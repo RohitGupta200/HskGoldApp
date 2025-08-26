@@ -116,6 +116,16 @@ class ProductController(
             val imageBase64: String? = null
         )
 
+        @Serializable
+        data class ProductListResponse(
+            val id: String,
+            val name: String,
+
+            val price: Double,
+
+            val category: String,
+        )
+
         fun ApprovedProduct.toResponse(imageBytes: ByteArray? = null) = ApprovedProductResponse(
             id = id.toString(),
             name = name,
@@ -146,19 +156,11 @@ class ProductController(
             imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
         )
 
-        fun ProductWithImage.toResponse() = ProductResponse(
+        fun ProductWithOutImageForList.toResponse() = ProductListResponse(
             id = id.toString(),
             name = name,
-            description = description,
             price = price,
-            weight = weight,
-            dimension = dimension,
-            purity = purity,
-            maxQuantity = maxQuantity,
             category = category,
-            createdAt = createdAt.toString(),
-            updatedAt = updatedAt.toString(),
-            imageBase64 = image
         )
 
         route("/products") {
@@ -531,6 +533,18 @@ class ProductController(
                     } else {
                         call.respond(HttpStatusCode.NotFound, "Product not found")
                     }
+                }
+            }
+
+            // Public: fetch product image bytes by product ID
+            get("{id}/image") {
+                val id = call.parameters["id"]?.let { UUID.fromString(it) }
+                    ?: throw IllegalArgumentException("Invalid ID format")
+                val img = productRepository.getImage(id)
+                if (img == null) {
+                    call.respond(HttpStatusCode.NotFound, "Image not found")
+                } else {
+                    call.respondBytes(bytes = img, contentType = ContentType.Image.Any)
                 }
             }
         }
