@@ -34,6 +34,7 @@ import org.cap.gold.auth.AuthService
 import org.cap.gold.auth.model.AuthResult
 import org.cap.gold.model.User
 import org.cap.gold.ui.components.BrandingImage
+import org.cap.gold.util.validatePhoneNumber
 // Removed PhoneLoginForm; using inline fields for email/password and phone (on signup)
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
@@ -53,6 +54,7 @@ fun LoginScreen(
     var isSignUp by remember { mutableStateOf(false) }
     var signupName by remember { mutableStateOf("") }
     var signupPhone by remember { mutableStateOf("") }
+    var shopeName by remember { mutableStateOf("") }
     // Use an independent scope so login work isn't cancelled when this composable leaves composition
     val coroutineScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     DisposableEffect(Unit) {
@@ -64,8 +66,9 @@ fun LoginScreen(
     }
 
     fun handleAuth() {
-        if (!email.contains("@") || !email.contains(".")) {
-            errorMessage = "Please enter a valid email address"
+
+        if (isSignUp && !validatePhoneNumber(email).success) {
+            errorMessage = "Please enter a valid Phone number"
             return
         }
 
@@ -153,17 +156,55 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
+            // Name (signup only)
+            if (isSignUp) {
+                OutlinedTextField(
+                    value = signupName,
+                    onValueChange = { signupName = it },
+                    label = { Text("Your Name") },
+                    singleLine = true,
+                    enabled = !isLoading,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                )
+            }
+
+            // Phone (signup only)
+            if (isSignUp) {
+                OutlinedTextField(
+                    value = shopeName,
+                    onValueChange = { shopeName = it },
+                    label = { Text("Shop Name (Optional)") },
+                    singleLine = true,
+                    enabled = !isLoading,
+                    isError = errorMessage != null,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                )
+            }
+
 
             // Email field
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
+                onValueChange = { email = it
+                                signupPhone = it},
+                label = { Text("Phone Number") },
                 singleLine = true,
                 enabled = !isLoading,
                 isError = errorMessage != null,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
+                    keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Next
                 ),
                 modifier = Modifier
@@ -195,42 +236,7 @@ fun LoginScreen(
                     .padding(bottom = 16.dp)
             )
 
-            // Name (signup only)
-            if (isSignUp) {
-                OutlinedTextField(
-                    value = signupName,
-                    onValueChange = { signupName = it },
-                    label = { Text("Full Name") },
-                    singleLine = true,
-                    enabled = !isLoading,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Next
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                )
-            }
 
-            // Phone (signup only)
-            if (isSignUp) {
-                OutlinedTextField(
-                    value = signupPhone,
-                    onValueChange = { signupPhone = it },
-                    label = { Text("Phone Number (required)") },
-                    singleLine = true,
-                    enabled = !isLoading,
-                    isError = errorMessage != null,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                )
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

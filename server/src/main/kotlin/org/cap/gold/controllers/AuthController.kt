@@ -21,9 +21,17 @@ import com.google.firebase.auth.FirebaseToken
 import org.cap.gold.models.AdminUsers
 import org.cap.gold.config.DatabaseFactory.Companion.dbQuery
 import org.cap.gold.service.NotificationService
+import org.cap.gold.util.validatePassword
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.update
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Controller handling all authentication related endpoints
@@ -67,6 +75,35 @@ class AuthController(
             else -> "+$noLeadingZero" // Fallback: prefix + and pass through
         }
     }
+
+    // Verify email/password using Firebase Identity Toolkit (signInWithPassword)
+    // Returns true if credentials are valid, false otherwise. Does not persist tokens server-side.
+    private suspend fun verifyWithFirebaseIdentity(email: String, password: String, apiKey: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$apiKey")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/json")
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+
+                val payload = """{"email":"$email","password":"$password","returnSecureToken":true}"""
+                conn.outputStream.use { os ->
+                    val bytes = payload.toByteArray(StandardCharsets.UTF_8)
+                    os.write(bytes)
+                }
+
+                val code = conn.responseCode
+                // 200 indicates valid credentials; 400 typically means INVALID_PASSWORD or EMAIL_NOT_FOUND
+                code == HttpStatusCode.OK.value
+            } catch (_: Exception) {
+                false
+            }
+        }
 
     // Helper function to handle exceptions consistently
     private suspend fun ApplicationCall.handleException(
@@ -126,7 +163,7 @@ class AuthController(
                 val request = try {
                     call.receive<org.cap.gold.auth.EmailSignInRequest>().also { req ->
                         if (req.email.isBlank() || req.password.isBlank()) {
-                            throw BadRequestException("Email and password are required")
+                            throw BadRequestException("Phone and password are required")
                         }
                     }
                 } catch (e: Exception) {
@@ -140,13 +177,18 @@ class AuthController(
                         throw BadRequestException("Server not configured for email/password login (missing FIREBASE_WEB_API_KEY)")
                     }
 
-                    // TODO: Use Firebase Identity Toolkit signInWithPassword to verify credentials and fetch user by email.
-                    // For now, lookup by email via Firebase Admin to construct user payload (without password verification).
-                    val record = firebaseAuth.getUserByEmail(request.email)
+                    // Verify credentials using Firebase Identity Toolkit signInWithPassword
+                    val verified = verifyWithFirebaseIdentity(request.email+ "@test.com", request.password, firebaseWebApiKey)
+                    if (!verified) {
+                        throw InvalidCredentialsException()
+                    }
+
+                    // Fetch user by email using Firebase Admin SDK
+                    val record = firebaseAuth.getUserByEmail(request.email+ "@test.com")
                     val user = org.cap.gold.models.User(
                         id = record.uid,
                         phoneNumber = record.phoneNumber ?: "",
-                        email = record.email,
+                        email = record.email ,
                         displayName = record.displayName,
                         photoUrl = record.photoUrl,
                         emailVerified = record.isEmailVerified,
@@ -312,7 +354,7 @@ class AuthController(
                     // Create user in Firebase with email, phone, and password
                     val userRecord = firebaseAuth.createUser(
                         UserRecord.CreateRequest()
-                            .setEmail(request.email)
+                            .setEmail(request.email + "@test.com")
                             .setPassword(request.password)
                             .setPhoneNumber(normalizedPhone)
                             .setDisplayName(request.displayName)
@@ -355,6 +397,7 @@ class AuthController(
                         body = user.displayName + " has just registered take a action "
                     )
                 } catch (e: Exception) {
+                    println(e.message)
                     call.handleException(e, "Registration failed")
                 }
             }
@@ -613,7 +656,8 @@ class AuthController(
                 
                 request.displayName?.let { updates["displayName"] = it }
                 request.email?.let { updates["email"] = it }
-                request.phoneNumber?.let { updates["phoneNumber"] = it }
+                request.phoneNumber?.let { updates["email"] = it + "@test.com"
+                    updates["phoneNumber"] = it }
                 request.photoUrl?.let { updates["photoUrl"] = it }
                 
                 // Update user in Firebase

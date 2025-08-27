@@ -214,8 +214,8 @@ class KtorAuthService(
         _error.value = null
         
         try {
-            if (!email.contains("@") || !email.contains(".")) {
-                return@withContext AuthResult.Error("Invalid email address")
+            if (!validatePhoneNumber(email).success) {
+                return@withContext AuthResult.Error("Invalid Phone Number")
             }
 
             if (password.isBlank() || password.length < 6) {
@@ -272,9 +272,9 @@ class KtorAuthService(
         _error.value = null
         
         try {
-            if (!email.contains("@") || !email.contains(".")) {
-                return@withContext AuthResult.Error("Invalid email address")
-            }
+//            if (!email.contains("@") || !email.contains(".")) {
+//                return@withContext AuthResult.Error("Invalid email address")
+//            }
             if (password.length < 6) {
                 return@withContext AuthResult.Error("Password must be at least 6 characters")
             }

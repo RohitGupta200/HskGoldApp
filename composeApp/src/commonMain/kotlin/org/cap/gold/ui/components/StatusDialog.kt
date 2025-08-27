@@ -15,15 +15,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,7 +68,6 @@ class StatusDialogState(
         this.subMessage.value = subMessage
         this.visible.value = true
     }
-
     fun hide() { visible.value = false }
 }
 
@@ -88,6 +91,37 @@ val LocalStatusDialogState = staticCompositionLocalOf<StatusDialogState> {
     error("StatusDialogState not provided")
 }
 
+// Add-Field dialog state and Local
+class AddFieldDialogState(
+    initialVisible: Boolean = false
+) {
+    val visible: MutableState<Boolean> = mutableStateOf(initialVisible)
+    private var onAdd: ((String, String) -> Unit)? = null
+
+    fun show(onAdd: (String, String) -> Unit) {
+        this.onAdd = onAdd
+        this.visible.value = true
+    }
+
+    fun hide() {
+        this.visible.value = false
+        this.onAdd = null
+    }
+
+    internal fun submit(label: String, value: String) {
+        onAdd?.invoke(label, value)
+    }
+}
+
+@Composable
+fun rememberAddFieldDialogState(initialVisible: Boolean = false): AddFieldDialogState = remember {
+    AddFieldDialogState(initialVisible)
+}
+
+val LocalAddFieldDialogState = staticCompositionLocalOf<AddFieldDialogState> {
+    error("AddFieldDialogState not provided")
+}
+
 /**
  * Provides a centralized StatusDialog state and renders the dialog above [content].
  * Usage: wrap your app root once, then call LocalStatusDialogState.current.show(...) from any screen.
@@ -97,7 +131,11 @@ fun ProvideStatusDialog(
     state: StatusDialogState = rememberStatusDialogState(),
     content: @Composable () -> Unit
 ) {
-    CompositionLocalProvider(LocalStatusDialogState provides state) {
+    val addFieldState = rememberAddFieldDialogState()
+    CompositionLocalProvider(
+        LocalStatusDialogState provides state,
+        LocalAddFieldDialogState provides addFieldState
+    ) {
         content()
         StatusDialog(
             visible = state.visible.value,
@@ -105,6 +143,10 @@ fun ProvideStatusDialog(
             message = state.message.value,
             subMessage = state.subMessage.value,
             onDismissRequest = { state.hide() }
+        )
+        AddFieldDialog(
+            state = addFieldState,
+            onDismissRequest = { addFieldState.hide() }
         )
     }
 }
@@ -169,6 +211,73 @@ fun StatusDialog(
                         ),
                         textAlign = TextAlign.Center
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddFieldDialog(
+    state: AddFieldDialogState,
+    onDismissRequest: () -> Unit = {}
+) {
+    if (!state.visible.value) return
+
+    var label by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Add a Field",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1B1B1B)
+                    )
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                TextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Label") }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                TextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Value") }
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        state.submit(label.trim(), value.trim())
+                        state.hide()
+                        label = ""
+                        value = ""
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Add")
                 }
             }
         }

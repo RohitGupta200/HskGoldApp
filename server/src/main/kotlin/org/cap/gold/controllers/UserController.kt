@@ -36,7 +36,7 @@ class UserController(
 
                 // Use Firebase Admin listUsers with pageToken
                 // Note: Java Admin SDK does not expose maxResults in the public API; it returns up to 1000 users per page.
-                val page: ListUsersPage = firebaseAuth.listUsers(pageToken)
+                val page: ListUsersPage = firebaseAuth.listUsers(pageToken,pageSize)
 
                 val usersBatch = page.values.map { it.toUserListItem().toApiUser() }
                 val nextTokenRaw = page.nextPageToken
