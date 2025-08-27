@@ -31,7 +31,8 @@ class ProductController(
             val dimension: String,
             val purity: String,
             val maxQuantity: Int,
-            val category: String
+            val category: String,
+            val customFields: String
         )
 
         // Generic payload used for admin upsert-both
@@ -44,7 +45,8 @@ class ProductController(
             val dimension: String,
             val purity: String,
             val maxQuantity: Int,
-            val category: String
+            val category: String,
+            val customFields: String
         )
 
         @Serializable
@@ -64,7 +66,8 @@ class ProductController(
             val dimension: String,
             val purity: String,
             val maxQuantity: Int,
-            val category: String
+            val category: String,
+            val customFields: String
         )
 
         // Response DTOs (serializable) to avoid issues with UUID/LocalDateTime
@@ -79,6 +82,7 @@ class ProductController(
             val purity: String,
             val maxQuantity: Int,
             val category: String,
+            val customFields: String,
             val createdAt: String,
             val updatedAt: String,
             val imageBase64: String? = null
@@ -95,6 +99,7 @@ class ProductController(
             val purity: String,
             val maxQuantity: Int,
             val category: String,
+            val customFields: String,
             val createdAt: String,
             val updatedAt: String,
             val imageBase64: String? = null
@@ -111,6 +116,7 @@ class ProductController(
             val purity: String,
             val maxQuantity: Int,
             val category: String,
+            val customFields: String,
             val createdAt: String,
             val updatedAt: String,
             val imageBase64: String? = null
@@ -136,6 +142,7 @@ class ProductController(
             purity = purity,
             maxQuantity = maxQuantity,
             category = category,
+            customFields = customFields,
             createdAt = createdAt.toString(),
             updatedAt = updatedAt.toString(),
             imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
@@ -151,6 +158,7 @@ class ProductController(
             purity = purity,
             maxQuantity = maxQuantity,
             category = category,
+            customFields = customFields,
             createdAt = createdAt.toString(),
             updatedAt = updatedAt.toString(),
             imageBase64 = imageBytes?.let { Base64.getEncoder().encodeToString(it) }
@@ -234,6 +242,7 @@ class ProductController(
                             purity = it.purity,
                             maxQuantity = it.maxQuantity,
                             category = it.category,
+                            customFields = it.customFields,
                             createdAt = now,
                             updatedAt = now
                         )
@@ -249,6 +258,7 @@ class ProductController(
                             purity = it.purity,
                             maxQuantity = it.maxQuantity,
                             category = it.category,
+                            customFields = it.customFields,
                             createdAt = now,
                             updatedAt = now
                         )
@@ -309,6 +319,7 @@ class ProductController(
                             purity = it.purity,
                             maxQuantity = it.maxQuantity,
                             category = it.category,
+                            customFields = it.customFields,
                             createdAt = existing?.createdAt ?: now,
                             updatedAt = now
                         )
@@ -325,6 +336,7 @@ class ProductController(
                             purity = it.purity,
                             maxQuantity = it.maxQuantity,
                             category = it.category,
+                            customFields = it.customFields,
                             createdAt = existing?.createdAt ?: now,
                             updatedAt = now
                         )
@@ -370,6 +382,7 @@ class ProductController(
                         purity = req.purity,
                         maxQuantity = req.maxQuantity,
                         category = req.category,
+                        customFields = req.customFields,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -410,6 +423,7 @@ class ProductController(
                         purity = dto.purity,
                         maxQuantity = dto.maxQuantity,
                         category = dto.category,
+                        customFields = dto.customFields,
                         createdAt = existing.createdAt,
                         updatedAt = LocalDateTime.now()
                     )
@@ -471,6 +485,7 @@ class ProductController(
                         purity = req.purity,
                         maxQuantity = req.maxQuantity,
                         category = req.category,
+                        customFields = req.customFields,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -498,6 +513,7 @@ class ProductController(
                         purity = dto.purity,
                         maxQuantity = dto.maxQuantity,
                         category = dto.category,
+                        customFields = dto.customFields,
                         createdAt = existing.createdAt,
                         updatedAt = LocalDateTime.now()
                     )

@@ -20,6 +20,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
         }.value
         product.copy(id = id)
     }
@@ -34,6 +35,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
         }.value
         
         product.copy(id = id)
@@ -51,6 +53,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
             it[createdAt] = product.createdAt
             it[updatedAt] = product.updatedAt
         }
@@ -68,6 +71,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
             it[createdAt] = product.createdAt
             it[updatedAt] = product.updatedAt
         }
@@ -94,6 +98,7 @@ class ProductRepository {
                 it[purity] = product.purity
                 it[maxQuantity] = product.maxQuantity
                 it[category] = product.category
+                it[customFields] = product.customFields
             }.value
             
             // Return the approved product directly from the same transaction
@@ -247,6 +252,7 @@ class ProductRepository {
                         purity = unapproved.purity,
                         maxQuantity = unapproved.maxQuantity,
                         category = unapproved.category,
+                        customFields = unapproved.customFields,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -265,6 +271,7 @@ class ProductRepository {
                         purity = approved.purity,
                         maxQuantity = approved.maxQuantity,
                         category = approved.category,
+                        customFields = approved.customFields,
                         createdAt = now,
                         updatedAt = now
                     )
@@ -282,6 +289,7 @@ class ProductRepository {
                         it[purity] = ap.purity
                         it[maxQuantity] = ap.maxQuantity
                         it[category] = ap.category
+                        it[customFields] = ap.customFields
                         it[createdAt] = ap.createdAt
                         it[updatedAt] = ap.updatedAt
                     }
@@ -298,6 +306,7 @@ class ProductRepository {
                         it[purity] = up.purity
                         it[maxQuantity] = up.maxQuantity
                         it[category] = up.category
+                        it[customFields] = up.customFields
                         it[createdAt] = up.createdAt
                         it[updatedAt] = up.updatedAt
                     }
@@ -316,6 +325,7 @@ class ProductRepository {
                             it[purity] = ap.purity
                             it[maxQuantity] = ap.maxQuantity
                             it[category] = ap.category
+                            it[customFields] = ap.customFields
                             it[createdAt] = ap.createdAt
                             it[updatedAt] = java.time.LocalDateTime.now()
                         }
@@ -329,6 +339,7 @@ class ProductRepository {
                             it[purity] = ap.purity
                             it[maxQuantity] = ap.maxQuantity
                             it[category] = ap.category
+                            it[customFields] = ap.customFields
                             it[updatedAt] = java.time.LocalDateTime.now()
                         }
                     }
@@ -346,6 +357,7 @@ class ProductRepository {
                             it[purity] = up.purity
                             it[maxQuantity] = up.maxQuantity
                             it[category] = up.category
+                            it[customFields] = up.customFields
                             it[createdAt] = up.createdAt
                             it[updatedAt] = java.time.LocalDateTime.now()
                         }
@@ -359,6 +371,7 @@ class ProductRepository {
                             it[purity] = up.purity
                             it[maxQuantity] = up.maxQuantity
                             it[category] = up.category
+                            it[customFields] = up.customFields
                             it[updatedAt] = java.time.LocalDateTime.now()
                         }
                     }
@@ -379,6 +392,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
             it[updatedAt] = java.time.LocalDateTime.now()
         } > 0
     }
@@ -393,6 +407,7 @@ class ProductRepository {
             it[purity] = product.purity
             it[maxQuantity] = product.maxQuantity
             it[category] = product.category
+            it[customFields] = product.customFields
             it[updatedAt] = java.time.LocalDateTime.now()
         } > 0
     }

@@ -10,6 +10,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.cap.gold.data.model.Order
 import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.data.model.Product
@@ -23,6 +26,16 @@ class ProductDetailViewModel(
     val isAdmin: Boolean,
     val isApprovedUser: Boolean
 ) {
+
+    data class Field(
+        val label: String,
+        val value: String
+    )
+    @Serializable
+    private data class FieldDto(
+        val label: String,
+        val value: String
+    )
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
     
     var isLoading by mutableStateOf(false)
@@ -31,6 +44,8 @@ class ProductDetailViewModel(
     var orderSuccess by mutableStateOf(false)
     var showOrderDialog by mutableStateOf(false)
     var quantity by mutableStateOf(1)
+
+    val fields = mutableStateListOf<Field>()
     // Image selection state (admin edit/create)
     var selectedImageBytes by mutableStateOf<ByteArray?>(null)
         private set
@@ -77,7 +92,7 @@ class ProductDetailViewModel(
                 product = if (isAdmin) {
                     // Admin: fetch both and prefer approved if present
                     val both = try { productApiService.getBothVariantsById(productId) } catch (_: Exception) { null }
-                    when {
+                    val p = when {
                         both == null -> null
                         both.approved != null -> Product(
                             id = productId,
@@ -107,10 +122,24 @@ class ProductDetailViewModel(
                         )
                         else -> null
                     }
+                    // Populate fields from customFields JSON
+                    val fieldsJson = both?.approved?.customFields ?: both?.unapproved?.customFields
+                    setFieldsFromJson(fieldsJson)
+                    p
                 } else if (isApprovedUser) {
-                    productApiService.getProductById(productId)
+                    val p = productApiService.getProductById(productId)
+                    // Fetch customFields from approved variant
+                    val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
+                    val fieldsJson = both?.approved?.customFields
+                    setFieldsFromJson(fieldsJson)
+                    p
                 } else {
-                    productApiService.getUnapprovedProductById(productId)
+                    val p = productApiService.getUnapprovedProductById(productId)
+                    // Fetch customFields from unapproved variant
+                    val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
+                    val fieldsJson = both?.unapproved?.customFields
+                    setFieldsFromJson(fieldsJson)
+                    p
                 }
                 // Debug: log image info received from API
                 runCatching {
@@ -136,6 +165,7 @@ class ProductDetailViewModel(
         error = null
         viewModelScope.launch {
             try {
+                val approvedFieldsJson = buildCustomFieldsJson()
                 if (isCreateMode) {
                     // Create via both-variants API; send only one side to allow copy
                     val newId = productApiService.createBothVariants(
@@ -143,7 +173,9 @@ class ProductDetailViewModel(
                         approved = updatedProduct,
                         unapproved = null,
                         imageBytes = selectedImageBytes,
-                        imageFileName = selectedImageFileName
+                        imageFileName = selectedImageFileName,
+                        approvedCustomFields = approvedFieldsJson,
+                        unapprovedCustomFields = null
                     )
                     // Load created product (approved preferred)
                     product = productApiService.getProductById(newId)
@@ -154,7 +186,9 @@ class ProductDetailViewModel(
                         approved = updatedProduct,
                         unapproved = null,
                         imageBytes = selectedImageBytes,
-                        imageFileName = selectedImageFileName
+                        imageFileName = selectedImageFileName,
+                        approvedCustomFields = approvedFieldsJson,
+                        unapprovedCustomFields = null
                     )
                     // Refresh current product
                     product = productApiService.getProductById(productId)
@@ -200,6 +234,7 @@ class ProductDetailViewModel(
         }
     }
 
+
     
     fun placeOrder(userPhone: String, userName: String, onSuccess: (Order) -> Unit) {        
         val currentProduct = product ?: return
@@ -240,6 +275,14 @@ class ProductDetailViewModel(
             }
         }
     }
+
+    fun addField(label: String, value: String) {
+        fields.add(Field(label, value))
+    }
+
+    fun removeField(i:Int) {
+        fields.removeAt(i)
+    }
     
     fun incrementQuantity() {
         val maxQuantity = product?.maxQuantity ?: Int.MAX_VALUE
@@ -261,13 +304,16 @@ class ProductDetailViewModel(
         error = null
         viewModelScope.launch {
             try {
+                val fieldsJson = buildCustomFieldsJson()
                 if (isCreateMode) {
                     val newId = productApiService.createBothVariants(
                         id = null,
                         approved = approved,
                         unapproved = unapproved,
                         imageBytes = selectedImageBytes,
-                        imageFileName = selectedImageFileName
+                        imageFileName = selectedImageFileName,
+                        approvedCustomFields = approved?.let { fieldsJson },
+                        unapprovedCustomFields = unapproved?.let { fieldsJson }
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(newId) }.getOrNull()
@@ -306,7 +352,9 @@ class ProductDetailViewModel(
                         approved = approved,
                         unapproved = unapproved,
                         imageBytes = selectedImageBytes,
-                        imageFileName = selectedImageFileName
+                        imageFileName = selectedImageFileName,
+                        approvedCustomFields = approved?.let { fieldsJson },
+                        unapprovedCustomFields = unapproved?.let { fieldsJson }
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
@@ -351,6 +399,30 @@ class ProductDetailViewModel(
         }
     }
     
+    private fun buildCustomFieldsJson(): String {
+        return try {
+            val list = fields.map { FieldDto(it.label, it.value) }
+            Json.encodeToString(ListSerializer(FieldDto.serializer()), list)
+        } catch (_: Exception) {
+            "[]"
+        }
+    }
+
+    private fun setFieldsFromJson(json: String?) {
+        if (json.isNullOrBlank()) {
+            fields.clear()
+            return
+        }
+        runCatching {
+            val dtos = Json.decodeFromString(ListSerializer(FieldDto.serializer()), json)
+            fields.clear()
+            fields.addAll(dtos.map { Field(it.label, it.value) })
+        }.onFailure {
+            // On parse failure, keep existing fields or clear
+            fields.clear()
+        }
+    }
+
     fun clearError() {
         error = null
     }

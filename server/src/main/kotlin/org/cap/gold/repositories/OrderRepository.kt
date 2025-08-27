@@ -39,6 +39,14 @@ class OrderRepository {
             .map { Order.fromRow(it) }
             .singleOrNull()
     }
+
+    suspend fun getUserOrdersWithoutPagination(userMobile: String): Pair<List<Order>, Long> = transaction {
+        val query = Orders.select { Orders.userMobile eq userMobile }
+        val total = query.count()
+        val orders=query.map { Order.fromRow(it) }
+        return@transaction orders to total
+
+    }
     
     suspend fun searchOrders(
         query: String? = null,

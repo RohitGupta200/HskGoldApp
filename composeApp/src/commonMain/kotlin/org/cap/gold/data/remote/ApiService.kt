@@ -33,6 +33,7 @@ data class SimpleProductResponse(
     val maxQuantity: Int,
     val category: String,
     val imageBase64: String? = null,
+    val customFields: String = "",
     val createdAt: String? = null,
     val updatedAt: String? = null
 )
@@ -75,7 +76,9 @@ interface ProductApiService {
         unapproved: Product?,
         imageBytes: ByteArray? = null,
         imageFileName: String? = null,
-        imageContentType: ContentType = ContentType.Image.Any
+        imageContentType: ContentType = ContentType.Image.Any,
+        approvedCustomFields: String? = null,
+        unapprovedCustomFields: String? = null
     ): String
     suspend fun updateBothVariants(
         id: String,
@@ -83,7 +86,9 @@ interface ProductApiService {
         unapproved: Product?,
         imageBytes: ByteArray? = null,
         imageFileName: String? = null,
-        imageContentType: ContentType = ContentType.Image.Any
+        imageContentType: ContentType = ContentType.Image.Any,
+        approvedCustomFields: String? = null,
+        unapprovedCustomFields: String? = null
     ): String
     // Order-related (stub for now)
     suspend fun createOrder(
@@ -176,7 +181,8 @@ class ProductApiServiceImpl(
         val dimension: String,
         val purity: String,
         val maxQuantity: Int,
-        val category: String
+        val category: String,
+        val customFields: String = ""
     )
 
     private fun SimpleProductResponse.toProduct(id: String): Product = Product(
@@ -209,7 +215,7 @@ class ProductApiServiceImpl(
         val unapproved: ProductPayload? = null
     )
 
-    private fun Product.toPayload(): ProductPayload = ProductPayload(
+    private fun Product.toPayload(customFields: String? = null): ProductPayload = ProductPayload(
         name = this.name,
         description = this.description,
         price = this.price,
@@ -217,7 +223,8 @@ class ProductApiServiceImpl(
         dimension = this.dimension,
         purity = this.purity,
         maxQuantity = this.maxQuantity,
-        category = this.category
+        category = this.category,
+        customFields = customFields ?: ""
     )
 
     override suspend fun createApprovedProduct(product: Product): Product =
@@ -272,12 +279,14 @@ class ProductApiServiceImpl(
         unapproved: Product?,
         imageBytes: ByteArray?,
         imageFileName: String?,
-        imageContentType: ContentType
+        imageContentType: ContentType,
+        approvedCustomFields: String?,
+        unapprovedCustomFields: String?
     ): String {
         val payload = UpsertBothRequest(
             id = id,
-            approved = approved?.toPayload(),
-            unapproved = unapproved?.toPayload()
+            approved = approved?.toPayload(approvedCustomFields),
+            unapproved = unapproved?.toPayload(unapprovedCustomFields)
         )
         val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
             val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)
@@ -327,11 +336,13 @@ class ProductApiServiceImpl(
         unapproved: Product?,
         imageBytes: ByteArray?,
         imageFileName: String?,
-        imageContentType: ContentType
+        imageContentType: ContentType,
+        approvedCustomFields: String?,
+        unapprovedCustomFields: String?
     ): String {
         val payload = UpsertBothRequest(
-            approved = approved?.toPayload(),
-            unapproved = unapproved?.toPayload()
+            approved = approved?.toPayload(approvedCustomFields),
+            unapproved = unapproved?.toPayload(unapprovedCustomFields)
         )
         val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
             val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)

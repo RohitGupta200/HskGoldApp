@@ -17,6 +17,8 @@ abstract class BaseProductTable(tableName: String) : UUIDTable(tableName) {
     val purity = varchar("purity", 50)
     val maxQuantity = integer("max_quantity")
     val category = varchar("category", 100)
+    // JSON string or any string payload carrying custom fields from client
+    val customFields = text("custom_fields").default("")
     val createdAt = datetime("created_at").default(LocalDateTime.now())
     val updatedAt = datetime("updated_at").default(LocalDateTime.now())
 }
@@ -48,6 +50,7 @@ interface Product {
     val purity: String
     val maxQuantity: Int
     val category: String
+    val customFields: String
     val createdAt: LocalDateTime
     val updatedAt: LocalDateTime
 
@@ -71,6 +74,7 @@ data class ApprovedProduct(
     override val purity: String,
     override val maxQuantity: Int,
     override val category: String,
+    override val customFields: String,
     override val createdAt: LocalDateTime,
     override val updatedAt: LocalDateTime
 ) : Product
@@ -85,6 +89,7 @@ data class UnapprovedProduct(
     override val purity: String,
     override val maxQuantity: Int,
     override val category: String,
+    override val customFields: String,
     override val createdAt: LocalDateTime,
     override val updatedAt: LocalDateTime
 ) : Product
@@ -108,6 +113,7 @@ fun ResultRow.toApprovedProduct() = ApprovedProduct(
     purity = this[ProductsApproved.purity],
     maxQuantity = this[ProductsApproved.maxQuantity],
     category = this[ProductsApproved.category],
+    customFields = this[ProductsApproved.customFields],
     createdAt = this[ProductsApproved.createdAt],
     updatedAt = this[ProductsApproved.updatedAt]
 )
@@ -122,6 +128,7 @@ fun ResultRow.toUnapprovedProduct() = UnapprovedProduct(
     purity = this[ProductsUnapproved.purity],
     maxQuantity = this[ProductsUnapproved.maxQuantity],
     category = this[ProductsUnapproved.category],
+    customFields = this[ProductsUnapproved.customFields],
     createdAt = this[ProductsUnapproved.createdAt],
     updatedAt = this[ProductsUnapproved.updatedAt]
 )

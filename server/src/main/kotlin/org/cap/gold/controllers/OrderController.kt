@@ -1,18 +1,29 @@
 package org.cap.gold.controllers
 
+import com.google.firebase.auth.FirebaseAuth
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.util.*
 import kotlinx.serialization.Serializable
 import org.cap.gold.models.*
 import org.cap.gold.repositories.OrderRepository
 import org.cap.gold.service.NotificationService
 import java.util.*
 
-class OrderController(private val orderRepository: OrderRepository,
-    private val notificationService: NotificationService
+// Single key to stash authenticated user id on the call
+private val USER_ID_KEY = AttributeKey<String>("userId")
+
+// Helper to fetch user id stored by intercept
+private fun ApplicationCall.userIdOrNull(): String? =
+    if (attributes.contains(USER_ID_KEY)) attributes[USER_ID_KEY] else null
+
+class OrderController(private val firebaseAuth: FirebaseAuth, private val orderRepository: OrderRepository,
+                      private val notificationService: NotificationService
 ) {
 
     // Serializable DTOs to avoid exposing UUIDs directly and to ensure proper JSON serialization
@@ -85,8 +96,23 @@ class OrderController(private val orderRepository: OrderRepository,
 
     fun Route.orderRoutes() {
         route("/orders") {
+            // Intercept all /orders calls to extract user from JWT access token
+            intercept(ApplicationCallPipeline.Call) {
+                val principal = call.principal<JWTPrincipal>()
+                if (principal == null) {
+                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Unauthorized"))
+                    finish()
+                    return@intercept
+                }
+                val userId = principal.payload.subject ?: ""
+                if (!call.attributes.contains(USER_ID_KEY)) {
+                    call.attributes.put(USER_ID_KEY, userId)
+                }
+                proceed()
+            }
             // Create a new order
             post {
+                // Example usage (if needed later): val userId = call.userIdOrNull()
                 val req = call.receive<CreateOrderRequestDto>()
                 val createdOrder = orderRepository.createOrder(
                     CreateOrderRequest(
@@ -110,27 +136,42 @@ class OrderController(private val orderRepository: OrderRepository,
 
             // Get all orders with pagination, search and filters (DB-backed)
             get {
+                val userId = call.userIdOrNull()
+                val user = firebaseAuth.getUser(userId)
                 val qp = call.request.queryParameters
                 val page = qp["page"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
                 val pageSize = qp["pageSize"]?.toIntOrNull()?.let { if (it <= 0) 30 else it } ?: 30
                 val query = qp["query"]?.takeIf { it.isNotBlank() }
                 val status = qp["status"]?.let { runCatching { OrderStatus.valueOf(it.uppercase()) }.getOrNull() }
                 val statusGroup = qp["statusGroup"]?.let { runCatching { OrderStatusGroup.valueOf(it.uppercase()) }.getOrNull() }
-
-                val (orders, total) = orderRepository.searchOrders(
-                    query = query,
-                    page = page,
-                    pageSize = pageSize,
-                    status = status,
-                    statusGroup = statusGroup
-                )
-                val dto = PaginatedResponse(
-                    data = orders.map { it.toDto() },
-                    total = total,
-                    page = page,
-                    pageSize = pageSize
-                )
-                call.respond(dto)
+                if(user.customClaims["role"] == 0) {
+                    val (orders, total) = orderRepository.searchOrders(
+                        query = query,
+                        page = page,
+                        pageSize = pageSize,
+                        status = status,
+                        statusGroup = statusGroup
+                    )
+                    val dto = PaginatedResponse(
+                        data = orders.map { it.toDto() },
+                        total = total,
+                        page = page,
+                        pageSize = pageSize
+                    )
+                    call.respond(dto)
+                }
+                else{
+                    val (orders, total) = orderRepository.getUserOrdersWithoutPagination(
+                        user.phoneNumber
+                    )
+                    val dto = PaginatedResponse(
+                        data = orders.map { it.toDto() },
+                        total = total,
+                        page = page,
+                        pageSize = pageSize
+                    )
+                    call.respond(dto)
+                }
             }
 
             // Get order by ID

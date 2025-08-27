@@ -91,7 +91,7 @@ fun appModule(env: ApplicationEnvironment) = module {
     single { ProductController(get(), get()) }
     single { CategoryController(get()) }
     single { UserController(get()) }
-    single { OrderController(get(),get()) }
+    single { OrderController(get(),get(),get()) }
 }
 
 // Configure Firebase

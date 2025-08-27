@@ -41,6 +41,7 @@ import org.cap.gold.data.repository.CategoryRepository
 import org.cap.gold.data.network.NetworkResponse
 import org.koin.compose.koinInject
 import org.cap.gold.platform.rememberImagePicker
+import org.cap.gold.ui.components.LocalAddFieldDialogState
 import org.cap.gold.ui.components.LocalStatusDialogState
 import org.cap.gold.ui.components.StatusDialog
 import kotlin.io.encoding.Base64
@@ -385,11 +386,13 @@ private fun ProductContent(
     onPlaceOrder: (String) -> Unit,
     onProductDeleted: () -> Unit
 ) {
+    val addField = LocalAddFieldDialogState.current
     val statusDialog = LocalStatusDialogState.current
     // Admin can edit inline without toggling edit mode
     var activeType by remember { mutableStateOf(VariantType.APPROVED) }
     var approvedDraft by remember { mutableStateOf(product) }
     var unapprovedDraft by remember { mutableStateOf(product) }
+    // Use viewModel.fields (SnapshotStateList) directly so mutations recompose
     val quantity = viewModel.quantity
 
     Column(
@@ -567,6 +570,34 @@ private fun ProductContent(
                         draft.copy(category = sel) else unapprovedDraft = draft.copy(category = sel)
                 }
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            for(i in viewModel.fields.indices){
+                ProductCustomRow(
+                    viewModel.fields[i].label,
+                    viewModel.fields[i].value,
+                    isAdmin,
+                    onRemoveField = { viewModel.removeField(i) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                DottedDivider()
+            }
+
+            if(!(viewModel.fields.size>=5))
+                Button(
+                    onClick = { addField.show { label, value ->
+                        viewModel.addField(label, value)
+                    } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Add a Field", style = MaterialTheme.typography.titleMedium)
+                }
 
             // Bottom actions styled like design: Delete (light) on top, Save primary below
             Spacer(modifier = Modifier.height(24.dp))
@@ -661,7 +692,16 @@ private fun ProductContent(
             ProductDetailRow("Category", product.category)
 
             Spacer(modifier = Modifier.height(8.dp))
+            for(i in viewModel.fields.indices){
+                DottedDivider()
+                ProductCustomRow( viewModel.fields[i].label, viewModel.fields[i].value, isAdmin, onRemoveField = { viewModel.removeField(i) })
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
+
+
+
+
             // Admin actions removed; admin edits inline above
             
             // --- Order Section for non-admins ---
@@ -807,6 +847,38 @@ private fun ProductDetailRow(label: String, value: String) {
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.End
             )
+        }
+    }
+}
+
+@Composable
+private fun ProductCustomRow(label: String, value: String,isAdmin: Boolean,onRemoveField: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = label + ":",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+            )
+            Text(
+                modifier = Modifier.padding(start = 12.dp),
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                textAlign = if(!isAdmin) TextAlign.End else TextAlign.Center
+            )
+            if (isAdmin) {
+                IconButton(onClick = { onRemoveField() }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
+            }
         }
     }
 }
