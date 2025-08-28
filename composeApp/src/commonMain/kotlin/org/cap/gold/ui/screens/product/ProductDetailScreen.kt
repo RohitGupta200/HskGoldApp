@@ -72,6 +72,63 @@ private fun EditableHeadline(
 }
 
 @Composable
+private fun EditableRowWithCheckBox(
+    label: String,
+    leftText: String,
+    checked: Boolean,
+    rightText: String,
+    onCheckedChange: (Boolean) -> Unit,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = leftText,
+                    onValueChange = onChange,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy( color = MaterialTheme.colorScheme.onSurface),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                ) { inner ->
+                    if (leftText.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    inner()
+                }
+
+
+
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    rightText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        DottedDivider()
+    }
+}
+
+@Composable
 private fun EditableMultiline(
     value: String,
     placeholder: String,
@@ -324,7 +381,16 @@ fun ProductDetailScreen(
                     isApprovedUser = viewModel.isApprovedUser,
                     categories = categoryNames,
                     onProductUpdate = { updated ->
-                        viewModel.updateProduct(updated) { onProductUpdated() }
+                        viewModel.updateProduct(updated) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(
+                                    success = true,
+                                    message = "Product Updated Successfully",
+                                )
+                                delay(1000)
+                                statusDialog.hide()
+                            }
+                            onProductUpdated() }
                     },
                     modifier = bodyModifier,
                     viewModel = viewModel,
@@ -333,7 +399,17 @@ fun ProductDetailScreen(
                         val customerName = user.name ?: user.displayName ?: ""
                         viewModel.placeOrder(phone, customerName) { onOrderSuccess(it.id) }
                     },
-                    onProductDeleted = onProductDeleted
+                    onProductDeleted = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            statusDialog.show(
+                                success = true,
+                                message = "Product Deleted Successfully",
+                            )
+                            delay(1000)
+                            statusDialog.hide()
+                        }
+                        onProductDeleted
+                    }
                 )
             } else {
                 ProductContent(
@@ -493,16 +569,22 @@ private fun ProductContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Editable numeric/text detail fields as label : value
-            EditableDetailRow(
+
+
+            // Sync price option: when enabled, unapproved.price will be set to approved.price on save
+            EditableRowWithCheckBox(
                 label = "Price",
-                value = draft.price.takeIf { !it.isNaN() }?.toString() ?: "",
-                placeholder = "Add price",
-                keyboardType = KeyboardType.Number,
+                leftText = draft.price.takeIf { !it.isNaN() }?.toString() ?: "",
+                checked = viewModel.syncPrices,
+                rightText = "Apply To All",
+                onCheckedChange = { viewModel.syncPrices = it },
                 onChange = { v ->
                     val d = v.toDoubleOrNull() ?: 0.0
                     if (activeType == VariantType.APPROVED) approvedDraft =
                         draft.copy(price = d) else unapprovedDraft = draft.copy(price = d)
-                }
+                },
+                placeholder = "Add price",
+                keyboardType = KeyboardType.Number,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -688,7 +770,7 @@ private fun ProductContent(
             DottedDivider()
             ProductDetailRow("Purity", product.purity)
             DottedDivider()
-            ProductDetailRow("Weight", "${product.weight} grams")
+            ProductDetailRow("Weight", "${product.weight} ")
             DottedDivider()
             ProductDetailRow("Dimensions", product.dimension)
             DottedDivider()
@@ -720,6 +802,14 @@ private fun ProductContent(
                     onDecrement = { viewModel.decrementQuantity() },
                     maxQuantity = product.maxQuantity
                 )
+                if (quantity >= product.maxQuantity) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Maximum Quantity Reached",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 DottedDivider()
@@ -736,7 +826,7 @@ private fun ProductContent(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White
                     ),
-                    enabled = !viewModel.isLoading
+                    enabled = !viewModel.isLoading && product.maxQuantity > 0
                 ) {
                     if (viewModel.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -860,7 +950,7 @@ private fun ProductCustomRow(label: String, value: String,isAdmin: Boolean,onRem
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {

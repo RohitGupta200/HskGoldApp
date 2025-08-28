@@ -7,6 +7,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,11 +23,16 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
 import org.cap.gold.auth.AuthService
 import org.cap.gold.model.User
 import org.cap.gold.profile.ProfileService
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
+import org.cap.gold.ui.components.LocalStatusDialogState
 
 @Composable
 fun AccountScreen(
@@ -116,16 +123,25 @@ private fun FilledInput(
     enabled: Boolean = true,
     isPassword: Boolean = false
 ) {
-    val bg = Color(0xFFEFF4FF) // light blue like in images
-    val shape = RoundedCornerShape(14.dp)
-    Surface(color = bg, shape = shape) {
+    var passwordVisible by remember { mutableStateOf(isPassword) }
+    val bg = Color(0xffffff)
+    Surface(color = bg) {
         Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 8.dp)) {
-            BasicTextField(
+            OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
                 enabled = enabled,
                 singleLine = true,
-                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                visualTransformation = if (!passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    if(isPassword) {
+                        val icon =
+                            if (!passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(icon, contentDescription = "Toggle password visibility")
+                        }
+                    }
+                },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -176,6 +192,7 @@ private fun ChangePasswordScreen(profile: ProfileService = koinInject(), auth: A
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val statusDialog = LocalStatusDialogState.current
 
     Scaffold(
         topBar = { TopBar(title = "Change password", onBack = { navigator?.pop() }) },
@@ -190,6 +207,12 @@ private fun ChangePasswordScreen(profile: ProfileService = koinInject(), auth: A
                         try {
                             profile.changePassword(currentPassword = current, newPassword = new)
                             auth.checkAuthState()
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(success = true, message = "Password updated successfully")
+                                delay(2500)
+                                statusDialog.hide()
+                            }
+
                             navigator?.pop()
                         } catch (e: Exception) {
                             error = e.message ?: "Failed to change password"
@@ -216,6 +239,7 @@ private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = ko
     var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val statusDialog = LocalStatusDialogState.current
 
     Scaffold(
         topBar = { TopBar(title = "Change Phone", onBack = { navigator?.pop() }) },
@@ -229,6 +253,11 @@ private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = ko
                         try {
                             profile.changePhone(phone,password)
                             auth.checkAuthState()
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(success = true, message = "Phone updated successfully")
+                                delay(2500)
+                                statusDialog.hide()
+                            }
                             navigator?.pop()
                         }
                         catch (e: Exception) { error = e.message ?: "Failed to change phone" }
@@ -254,6 +283,7 @@ private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = ko
     var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val statusDialog = LocalStatusDialogState.current
 
     Scaffold(
         topBar = { TopBar(title = "Change Shop Name", onBack = { navigator?.pop() }) },
@@ -266,6 +296,11 @@ private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = ko
                         try {
                             profile.changeEmail(email,password)
                             auth.checkAuthState()
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(success = true, message = "Shop updated successfully")
+                                delay(2500)
+                                statusDialog.hide()
+                            }
                             navigator?.pop()
                         }
                         catch (e: Exception) { error = e.message ?: "Failed to change Shop Name" }
@@ -277,7 +312,7 @@ private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = ko
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             LabeledFilledField(label = "Enter your password", value = password, onChange = {password = it}, password = true, enabled = true)
-            LabeledFilledField(label = "Enter new email", value = email, onChange = { email = it }, keyboardType = KeyboardType.Email)
+            LabeledFilledField(label = "Enter new Shop Name", value = email, onChange = { email = it }, keyboardType = KeyboardType.Email)
             if (error != null) ErrorChip(error!!)
         }
     }
@@ -292,6 +327,7 @@ private fun ChangeNameScreen(currentName: String, profile: ProfileService = koin
 
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val statusDialog = LocalStatusDialogState.current
 
     Scaffold(
         topBar = { TopBar(title = "Change Name", onBack = { navigator?.pop() }) },
@@ -305,6 +341,11 @@ private fun ChangeNameScreen(currentName: String, profile: ProfileService = koin
                         try {
                             profile.changeName(name,password)
                             auth.checkAuthState()
+                            CoroutineScope(Dispatchers.IO).launch {
+                                statusDialog.show(success = true, message = "Name updated successfully")
+                                delay(2500)
+                                statusDialog.hide()
+                            }
                             navigator?.pop()
                         }
                         catch (e: Exception) { error = e.message ?: "Failed to change name" }

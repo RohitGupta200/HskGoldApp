@@ -40,7 +40,7 @@ fun SplashScreen(
     LaunchedEffect(key1 = true) {
         // Scale up animation
         scale.animateTo(
-            targetValue = 1f,
+            targetValue = 2f,
             animationSpec = tween(
                 durationMillis = 800,
                 delayMillis = 200

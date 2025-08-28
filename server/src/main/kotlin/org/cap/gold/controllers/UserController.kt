@@ -12,6 +12,8 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.cap.gold.models.User as ServerUser
 import org.cap.gold.models.UserResponse
+import org.cap.gold.util.normalizeIndianPhone
+import org.cap.gold.util.validatePhoneNumber
 
 class UserController(
     private val firebaseAuth: FirebaseAuth
@@ -36,18 +38,36 @@ class UserController(
 
                 // Use Firebase Admin listUsers with pageToken
                 // Note: Java Admin SDK does not expose maxResults in the public API; it returns up to 1000 users per page.
-                val page: ListUsersPage = firebaseAuth.listUsers(pageToken,pageSize)
+                if(search.isEmpty()) {
+                    val page: ListUsersPage = firebaseAuth.listUsers(pageToken, pageSize)
 
-                val usersBatch = page.values.map { it.toUserListItem().toApiUser() }
-                val nextTokenRaw = page.nextPageToken
-                val nextToken = if (nextTokenRaw.isNullOrBlank()) null else nextTokenRaw
-                call.respond(
-                    HttpStatusCode.OK,
-                    UsersPageResponse(
-                        users = usersBatch,
-                        nextPageToken = nextToken
+                    val usersBatch = page.values.map { it.toUserListItem().toApiUser() }
+                    val nextTokenRaw = page.nextPageToken
+                    val nextToken = if (nextTokenRaw.isNullOrBlank()) null else nextTokenRaw
+                    call.respond(
+                        HttpStatusCode.OK,
+                        UsersPageResponse(
+                            users = usersBatch,
+                            nextPageToken = nextToken
+                        )
                     )
-                )
+                }
+                else{
+                    val nextToken = null
+                    val userList = ArrayList<ApiUser>()
+                    if(validatePhoneNumber(search).success){
+                        val user = firebaseAuth.getUserByEmail(normalizeIndianPhone(search) + "@test.com")
+                        if(user!=null)
+                            userList.add(user.toUserListItem().toApiUser())
+                    }
+                    call.respond(
+                        HttpStatusCode.OK,
+                        UsersPageResponse(
+                            users = userList,
+                            nextPageToken = nextToken
+                        )
+                    )
+                }
             }
 
             patch("/{id}/role") {

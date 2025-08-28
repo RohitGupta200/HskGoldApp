@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.cap.gold.di.userModule
 import org.cap.gold.model.User
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,12 +44,13 @@ import org.cap.gold.model.User
 fun UserListItem(
     user: User,
     onRoleChange: (String, Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    currentUser:User
 ) {
     var showRoleMenu by remember { mutableStateOf(false) }
     
     Card(
-        onClick = { showRoleMenu = true },
+        onClick = { if(user.id != currentUser.id) showRoleMenu = true },
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -135,6 +137,7 @@ fun UserListItem(
                         color = roleColor,
                         style = MaterialTheme.typography.labelMedium
                     )
+                    if(user.id != currentUser.id)
                     IconButton(
                         onClick = { showRoleMenu = true },
                         modifier = Modifier.size(24.dp)

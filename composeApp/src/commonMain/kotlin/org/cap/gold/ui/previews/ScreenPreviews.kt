@@ -56,7 +56,7 @@ fun ProfileScreenPreview() {
 fun UsersScreenPreview() {
     MaterialTheme {
         Surface {
-            UsersScreen()
+            UsersScreen(currentUser = testUser)
         }
     }
 }
@@ -83,7 +83,7 @@ fun MainNavigationPreview() {
                         AppScreen.Products.route -> ProductsScreen(user = testUser)
                         AppScreen.Orders.route -> OrdersScreen()
                         AppScreen.Profile.route -> ProfileScreen(user = testUser, onLogout = {})
-                        AppScreen.Users.route -> UsersScreen()
+                        AppScreen.Users.route -> UsersScreen(currentUser = testUser)
                     }
                 }
                 

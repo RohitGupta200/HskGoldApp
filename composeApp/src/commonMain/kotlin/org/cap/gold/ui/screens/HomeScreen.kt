@@ -109,7 +109,7 @@ fun HomeScreen(
             when (val screen = currentScreen) {
                 is AppScreen.Products -> ProductsScreen(user = user, navigator = navigator)
                 is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen()
-                is AppScreen.Users -> if (user.role == 0) UsersScreen() else {}
+                is AppScreen.Users -> if (user.role == 0) UsersScreen(currentUser = user) else {}
                 is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
 
             }

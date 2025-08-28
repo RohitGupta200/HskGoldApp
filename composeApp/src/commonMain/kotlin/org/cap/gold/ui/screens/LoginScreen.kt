@@ -64,6 +64,14 @@ fun LoginScreen(
     }
 
     fun handleAuth() {
+        if(email.isEmpty()){
+            errorMessage = "Please enter a valid Phone number"
+            return
+        }
+        if(password.isEmpty()){
+            errorMessage = "Please enter your password"
+            return
+        }
 
         if (isSignUp && !validatePhoneNumber(email).success) {
             errorMessage = "Please enter a valid Phone number"
@@ -123,7 +131,7 @@ fun LoginScreen(
         Column (
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 32.dp),
+                .padding(top = 42.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -151,7 +159,7 @@ fun LoginScreen(
             Text(
                 text = if (isSignUp) "Create Your Account" else "Login to your account",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = 36.dp),
                 color = MaterialTheme.colorScheme.primary
             )
 
@@ -249,7 +257,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.primary
                     ),
-                enabled = !isLoading && email.isNotBlank() && password.isNotBlank() && (!isSignUp || (signupPhone.isNotBlank() && signupName.isNotBlank()))
+                enabled = !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
@@ -273,7 +281,7 @@ fun LoginScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 8.dp)
+                            .padding(12.dp)
 
                     )
                 }

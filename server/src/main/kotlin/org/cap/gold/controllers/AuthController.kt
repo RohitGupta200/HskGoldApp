@@ -53,7 +53,7 @@ class AuthController(
     //  - "09876543210" -> "+919876543210"
     //  - "91XXXXXXXXXX" (12 digits) -> "+91XXXXXXXXXX"
     //  - Already in E.164 (e.g., "+919876543210") -> unchanged
-    private fun normalizeIndianPhone(raw: String): String {
+    fun normalizeIndianPhone(raw: String): String {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return trimmed
 

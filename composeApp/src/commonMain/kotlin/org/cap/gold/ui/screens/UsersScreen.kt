@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.cap.gold.model.User
 import org.cap.gold.ui.components.ErrorView
 import org.cap.gold.ui.components.AppSearchBar
 import org.cap.gold.ui.screens.admin.AdminUserListItem
@@ -33,7 +34,8 @@ fun UsersScreen(
     uiState: UsersUiState = UsersUiState.Loading,
     onBackClick: () -> Unit = {},
 
-    onSearch: (String) -> Unit = {}
+    onSearch: (String) -> Unit = {},
+    currentUser: User
 ) {
     val vm: UsersViewModel = koinInject()
     val state =  vm.uiState
@@ -138,6 +140,7 @@ fun UsersScreen(
                             items(state.users, key = { it.id }) { user ->
                                 UserListItem(
                                     user = user,
+                                    currentUser = currentUser,
                                     onRoleChange = { userId, newRole ->
                                         onUpdateUserRole(userId, newRole) {
                                             scope.launch {

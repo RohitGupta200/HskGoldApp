@@ -44,6 +44,8 @@ class ProductDetailViewModel(
     var orderSuccess by mutableStateOf(false)
     var showOrderDialog by mutableStateOf(false)
     var quantity by mutableStateOf(1)
+    // Admin option: when checked, sync unapproved.price to approved.price on save
+    var syncPrices by mutableStateOf(false)
 
     val fields = mutableStateListOf<Field>()
     // Image selection state (admin edit/create)
@@ -305,15 +307,20 @@ class ProductDetailViewModel(
         viewModelScope.launch {
             try {
                 val fieldsJson = buildCustomFieldsJson()
+                // If requested, copy price from approved to unapproved before save
+                val approvedFinal = approved
+                val unapprovedFinal = if (syncPrices && approvedFinal != null && unapproved != null) {
+                    unapproved.copy(price = approvedFinal.price)
+                } else unapproved
                 if (isCreateMode) {
                     val newId = productApiService.createBothVariants(
                         id = null,
-                        approved = approved,
-                        unapproved = unapproved,
+                        approved = approvedFinal,
+                        unapproved = unapprovedFinal,
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
-                        approvedCustomFields = approved?.let { fieldsJson },
-                        unapprovedCustomFields = unapproved?.let { fieldsJson }
+                        approvedCustomFields = approvedFinal?.let { fieldsJson },
+                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson }
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(newId) }.getOrNull()
@@ -349,12 +356,12 @@ class ProductDetailViewModel(
                 } else {
                     productApiService.updateBothVariants(
                         id = productId,
-                        approved = approved,
-                        unapproved = unapproved,
+                        approved = approvedFinal,
+                        unapproved = unapprovedFinal,
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
-                        approvedCustomFields = approved?.let { fieldsJson },
-                        unapprovedCustomFields = unapproved?.let { fieldsJson }
+                        approvedCustomFields = approvedFinal?.let { fieldsJson },
+                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson }
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()

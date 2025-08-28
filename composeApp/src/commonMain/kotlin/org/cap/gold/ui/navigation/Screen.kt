@@ -69,7 +69,7 @@ sealed class AppScreen(
             object : Screen {
                 @Composable
                 override fun Content() {
-                    if (user.role == 0) UsersScreen()
+                    if (user.role == 0) UsersScreen(currentUser = user)
                 }
             }
         }
