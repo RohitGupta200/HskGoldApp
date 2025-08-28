@@ -62,7 +62,7 @@ fun AccountScreen(
         if(!(user.role==0))
             InlineChangeRow(
                 label = "Shop Name",
-                value = user.email ?: "",
+                value = user.shopName ?: "",
                 onChangeClick = { navigator?.push(ChangeEmailVoyagerScreen(currentEmail = user.shopName ?: "")) }
             )
 
