@@ -671,8 +671,10 @@ class AuthController(
                 
                 request.displayName?.let { updates["displayName"] = it }
                 request.email?.let { updates["email"] = it }
-                request.phoneNumber?.let { updates["email"] = it + "@test.com"
-                    updates["phoneNumber"] = it }
+                request.phoneNumber?.let {
+                    val normalizedPhone = normalizeIndianPhone(it)
+                    updates["email"] = it + "@test.com"
+                    updates["phoneNumber"] = normalizedPhone }
                 request.photoUrl?.let { updates["photoUrl"] = it }
                 request.shopName?.let { updates["CustomToken"] = user.customClaims
                 user.customClaims["shopName"] = it}
