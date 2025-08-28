@@ -178,13 +178,14 @@ class AuthController(
                     }
 
                     // Verify credentials using Firebase Identity Toolkit signInWithPassword
-                    val verified = verifyWithFirebaseIdentity(request.email+ "@test.com", request.password, firebaseWebApiKey)
+                    val normalizedPhone2 = normalizeIndianPhone(request.email)
+                    val verified = verifyWithFirebaseIdentity(normalizedPhone2+ "@test.com", request.password, firebaseWebApiKey)
                     if (!verified) {
                         throw InvalidCredentialsException()
                     }
 
                     // Fetch user by email using Firebase Admin SDK
-                    val record = firebaseAuth.getUserByEmail(request.email+ "@test.com")
+                    val record = firebaseAuth.getUserByEmail(normalizedPhone2+ "@test.com")
                     val user = org.cap.gold.models.User(
                         id = record.uid,
                         phoneNumber = record.phoneNumber ?: "",
@@ -349,14 +350,14 @@ class AuthController(
                     return@post
                 }
 
-                    println("shopName: ${request.shopName}")
 
                 try {
                     val normalizedPhone = normalizeIndianPhone(request.phoneNumber)
+                    val normalizedPhone2 = normalizeIndianPhone(request.email)
                     // Create user in Firebase with email, phone, and password
                     val userRecord = firebaseAuth.createUser(
                         UserRecord.CreateRequest()
-                            .setEmail(request.email + "@test.com")
+                            .setEmail(normalizedPhone2 + "@test.com")
                             .setPassword(request.password)
                             .setPhoneNumber(normalizedPhone)
                             .setDisplayName(request.displayName)
