@@ -182,7 +182,7 @@ private fun UsersTopAppBar(
     modifier: Modifier = Modifier
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        TopAppBar(
+        CenterAlignedTopAppBar(
             title = {
                 Text(
                     text = "User Management",

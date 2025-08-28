@@ -37,7 +37,7 @@ fun ManageCategoriesScreen(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Manage Categories") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

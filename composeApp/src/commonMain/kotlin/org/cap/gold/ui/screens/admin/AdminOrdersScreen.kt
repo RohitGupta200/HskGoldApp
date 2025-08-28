@@ -99,7 +99,7 @@ fun AdminOrdersScreenContent(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("All Orders") },
             )
         }

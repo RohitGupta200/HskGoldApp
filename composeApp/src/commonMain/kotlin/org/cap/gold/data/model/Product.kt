@@ -11,7 +11,7 @@ data class Product(
     val imageBase64: String? = null,
     val category: String = "",
     val description: String = "",
-    val weight: Double = 0.0,
+    val weight: String = "",
     val purity: String = "",
     val dimension: String = "",
     val maxQuantity: Int = 1

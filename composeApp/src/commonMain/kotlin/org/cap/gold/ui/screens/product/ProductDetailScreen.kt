@@ -298,7 +298,7 @@ fun ProductDetailScreen(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text(if (viewModel.isAdmin) (product?.name ?: "Product Details") else "Item Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -521,13 +521,12 @@ private fun ProductContent(
 
             EditableDetailRow(
                 label = "Weight",
-                value = draft.weight.takeIf { !it.isNaN() }?.toString() ?: "",
+                value = draft.weight,
                 placeholder = "Add weight",
-                keyboardType = KeyboardType.Number,
+                keyboardType = KeyboardType.Text,
                 onChange = { v ->
-                    val d = v.toDoubleOrNull() ?: 0.0
                     if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(weight = d) else unapprovedDraft = draft.copy(weight = d)
+                        draft.copy(weight = v) else unapprovedDraft = draft.copy(weight = v)
                 }
             )
 
@@ -617,6 +616,9 @@ private fun ProductContent(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
+            // Enable Save only when required fields are set (admin): name, category, price
+            val currentDraft = if (activeType == VariantType.APPROVED) approvedDraft else unapprovedDraft
+            val canSave = currentDraft.name.isNotBlank() && currentDraft.category.isNotBlank() && !currentDraft.price.isNaN()
             Button(
                 onClick = {
                     val approvedToSend = approvedDraft
@@ -637,6 +639,7 @@ private fun ProductContent(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(18.dp),
+                enabled = canSave,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White

@@ -73,7 +73,7 @@ fun OrdersScreenContent(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("My Orders") },
             )
         }

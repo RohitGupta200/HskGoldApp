@@ -317,6 +317,40 @@ fun Application.module() {
             ProductImages,
             AdminUsers
         )
+
+        // 3) Migrate product weight column type from numeric to varchar(50) if needed (both tables)
+        // This block is idempotent: it only alters when the existing type is not character varying
+        exec(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'products_approved'
+                      AND column_name = 'weight'
+                      AND data_type <> 'character varying'
+                ) THEN
+                    EXECUTE 'ALTER TABLE products_approved ALTER COLUMN weight TYPE varchar(50) USING weight::varchar(50)';
+                END IF;
+            END $$;
+            """.trimIndent()
+        )
+
+        exec(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'products_unapproved'
+                      AND column_name = 'weight'
+                      AND data_type <> 'character varying'
+                ) THEN
+                    EXECUTE 'ALTER TABLE products_unapproved ALTER COLUMN weight TYPE varchar(50) USING weight::varchar(50)';
+                END IF;
+            END $$;
+            """.trimIndent()
+        )
     }
     
     // Configure Koin for dependency injection

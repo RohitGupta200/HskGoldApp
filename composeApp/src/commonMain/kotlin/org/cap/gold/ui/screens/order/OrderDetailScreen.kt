@@ -44,7 +44,7 @@ fun OrderDetailScreen(
     Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = { Text("Order Details") },
                     navigationIcon = {
                         IconButton(onClick = onBack) {

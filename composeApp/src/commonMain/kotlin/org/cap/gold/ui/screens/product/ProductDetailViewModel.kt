@@ -63,7 +63,7 @@ class ProductDetailViewModel(
                 imageUrl = "",
                 category = "",
                 description = "",
-                weight = 0.0,
+                weight = "",
                 purity = "",
                 dimension = "",
                 maxQuantity = 1

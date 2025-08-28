@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -353,16 +355,18 @@ private fun ErrorChip(text: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopBar(title: String, onBack: () -> Unit) {
     Surface(shadowElevation = 0.dp) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("←", modifier = Modifier.clickable { onBack() }.padding(8.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge)
-        }
+        CenterAlignedTopAppBar(
+            title = { Text(title) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
+        )
+
     }
 }

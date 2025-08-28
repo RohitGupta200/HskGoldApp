@@ -35,7 +35,6 @@ fun ProductManagementScreen(
                 id = index.toString(),
                 name = "Product $index",
                 price = 5000.0 + (index * 1000),
-                weight = 5.0 + index,
                 dimension = "${10 + index}mm",
                 purity = "22",
                 maxQuantity = 5,
@@ -50,7 +49,7 @@ fun ProductManagementScreen(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text(if (isAdmin) "Manage Products" else "Our Collection") },
                 actions = {
                     if (isAdmin) {

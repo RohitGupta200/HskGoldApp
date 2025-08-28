@@ -12,7 +12,7 @@ abstract class BaseProductTable(tableName: String) : UUIDTable(tableName) {
     val name = varchar("name", 200)
     val description = varchar("description", 1000)
     val price = double("price")
-    val weight = double("weight")
+    val weight = varchar("weight", 50)
     val dimension = varchar("dimension", 100)
     val purity = varchar("purity", 50)
     val maxQuantity = integer("max_quantity")
@@ -45,7 +45,7 @@ interface Product {
     val name: String
     val description: String
     val price: Double
-    val weight: Double
+    val weight: String
     val dimension: String
     val purity: String
     val maxQuantity: Int
@@ -69,7 +69,7 @@ data class ApprovedProduct(
     override val name: String,
     override val description: String,
     override val price: Double,
-    override val weight: Double,
+    override val weight: String,
     override val dimension: String,
     override val purity: String,
     override val maxQuantity: Int,
@@ -84,7 +84,7 @@ data class UnapprovedProduct(
     override val name: String,
     override val description: String,
     override val price: Double,
-    override val weight: Double,
+    override val weight: String,
     override val dimension: String,
     override val purity: String,
     override val maxQuantity: Int,
