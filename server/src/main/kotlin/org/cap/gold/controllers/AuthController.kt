@@ -702,6 +702,7 @@ class AuthController(
                 val userId = decodedToken.subject
                 val user = firebaseAuth.getUser(userId)
 
+
                 val request = call.receive<ChangePasswordRequest>()
                 firebaseWebApiKey?.let {
 
@@ -721,14 +722,9 @@ class AuthController(
                     userId,
                     mapOf("password" to request.newPassword)
                 )
-                
-                call.respond(
-                    HttpStatusCode.OK,
-                    mapOf(
-                        "success" to true,
-                        "message" to "Password updated successfully"
-                    )
-                )
+
+                call.respond(HttpStatusCode.OK, UserResponse.fromUser(updatedUser))
+
             }
 
             // Delete account
