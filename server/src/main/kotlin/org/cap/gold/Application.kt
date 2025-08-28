@@ -231,6 +231,21 @@ private fun Application.configureRouting(authController: AuthController) {
             // Auth routes mounted under /api/auth
             authController.apply { this@route.authRoutes() }
 
+            // Unauthenticated maintenance endpoint to delete orders older than 30 days
+            // createdAt is stored as epoch milliseconds (Long) in Orders.createdAt
+            run {
+                val orderRepository: OrderRepository by inject()
+                get("/deleteOldOrders") {
+                    val now = System.currentTimeMillis()
+                    val thirtyDaysMillis = 30L * 24 * 60 * 60 * 1000
+                    val cutoff = now - thirtyDaysMillis
+                    val deleted = orderRepository.deleteOrdersOlderThan(cutoff)
+                    call.respond(mapOf(
+                        "deleted" to deleted
+                    ))
+                }
+            }
+
             // Protected routes
             authenticate("auth-jwt") {
                 // Product routes

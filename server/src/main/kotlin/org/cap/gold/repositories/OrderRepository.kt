@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import java.util.*
 
 class OrderRepository {
@@ -171,6 +172,11 @@ class OrderRepository {
             .select { Orders.status eq OrderStatus.CONFIRMED }
             .map { it[Orders.totalAmount.sum()] ?: 0.0 }
             .first()
+    }
+
+    // Maintenance: delete orders older than the given cutoff (epoch millis)
+    suspend fun deleteOrdersOlderThan(cutoffMillis: Long): Int = transaction {
+        Orders.deleteWhere { Orders.createdAt less cutoffMillis }
     }
 }
 
