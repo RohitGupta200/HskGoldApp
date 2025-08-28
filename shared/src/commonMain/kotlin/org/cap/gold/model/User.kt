@@ -24,6 +24,7 @@ data class User(
     val isEmailVerified: Boolean = false,
     val name: String? = null,
     val role:Int = 3,
+    val shopName: String? = null,
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val lastLogin: Long = Clock.System.now().toEpochMilliseconds()
 )

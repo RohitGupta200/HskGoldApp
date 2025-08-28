@@ -28,7 +28,8 @@ data class EmailSignUpRequest(
     val email: String,
     val password: String,
     val phoneNumber: String,
-    val displayName: String? = null
+    val displayName: String? = null,
+    val shopName: String? = null
 )
 
 @Serializable

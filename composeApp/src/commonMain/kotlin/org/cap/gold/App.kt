@@ -18,6 +18,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import org.cap.gold.ui.navigation.ProvideAppNavigator
 import org.cap.gold.ui.screens.SplashScreen
 import org.cap.gold.ui.components.ProvideStatusDialog
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun App() {
@@ -68,9 +69,13 @@ object HomeRootScreen : Screen {
         val authState by authService.authState.collectAsState(initial = authService.currentUser)
         // If somehow authState is null here, avoid crashing
         val user = authState ?: return
+        // Persist selected bottom tab across pushes/pops
+        val selectedRouteState = rememberSaveable { mutableStateOf(org.cap.gold.ui.navigation.AppScreen.Products.route) }
         ProvideAppNavigator {
             HomeScreen(
                 user = user,
+                selectedRoute = selectedRouteState.value,
+                onSelectRoute = { selectedRouteState.value = it },
                 onLogout = {
                     coroutineScope.launch {
                         authService.signOut()

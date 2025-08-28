@@ -266,7 +266,8 @@ class KtorAuthService(
         email: String,
         password: String,
         phoneNumber: String,
-        displayName: String?
+        displayName: String?,
+        shopName: String?
     ): AuthResult<User> = withContext(coroutineContext) {
         _isLoading.value = true
         _error.value = null
@@ -286,7 +287,15 @@ class KtorAuthService(
             val token = try { getDeviceTokenFast() } catch (_: Exception) { null }
             val httpResponse = client.post("$baseUrl/api/auth/signup/email") {
                 contentType(ContentType.Application.Json)
-                setBody(EmailSignUpRequest(email = email, password = password, phoneNumber = phoneNumber, displayName = displayName))
+                setBody(
+                    EmailSignUpRequest(
+                        email = email,
+                        password = password,
+                        phoneNumber = phoneNumber,
+                        displayName = displayName,
+                        shopName = shopName
+                    )
+                )
             }
             val response: AuthResponse = if (httpResponse.status.value in 200..299) {
                 val parsed = httpResponse.safeParseAuth()

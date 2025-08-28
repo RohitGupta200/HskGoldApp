@@ -147,6 +147,10 @@ class UserRepository {
                         val password = value as? String ?: throw BadRequestException("Password cannot be null")
                         request.setPassword(password)
                     }
+                    "CustomToken" -> {
+                        val customClaims = value as? Map<String, Any> ?: throw BadRequestException("CustomClaims must be a Map")
+                        request.setCustomClaims(customClaims)
+                    }
                     else -> {
                         // Ignore unknown keys or throw if you prefer strict handling
                     }

@@ -101,9 +101,9 @@ fun UserListItem(
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                 )
                 
-                if (user.email != null) {
+                if (user.shopName != null) {
                     Text(
-                        text = user.email,
+                        text = user.shopName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

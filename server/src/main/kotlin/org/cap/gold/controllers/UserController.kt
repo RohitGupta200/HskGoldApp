@@ -41,7 +41,6 @@ class UserController(
                 val usersBatch = page.values.map { it.toUserListItem().toApiUser() }
                 val nextTokenRaw = page.nextPageToken
                 val nextToken = if (nextTokenRaw.isNullOrBlank()) null else nextTokenRaw
-
                 call.respond(
                     HttpStatusCode.OK,
                     UsersPageResponse(
@@ -95,7 +94,8 @@ private data class ApiUser(
     val name: String? = null,
     val role: Int = 3,
     val createdAt: Long = 0,
-    val lastLogin: Long = 0
+    val lastLogin: Long = 0,
+    val shopName: String? = null
 )
 
 private data class UserListItem(
@@ -107,7 +107,8 @@ private data class UserListItem(
     val emailVerified: Boolean,
     val createdAt: Long,
     val lastLogin: Long,
-    val role: Int
+    val role: Int,
+    val shopName: String?
 )
 
 @Serializable
@@ -118,6 +119,7 @@ private data class UsersPageResponse(
 
 private fun com.google.firebase.auth.UserRecord.toUserListItem(): UserListItem {
     val role = (customClaims?.get("role") as? Number)?.toInt() ?: 3
+    val shopName = (customClaims?.get("shopName") as? String)
     return UserListItem(
         id = uid,
         phoneNumber = phoneNumber ?: "",
@@ -127,7 +129,8 @@ private fun com.google.firebase.auth.UserRecord.toUserListItem(): UserListItem {
         emailVerified = isEmailVerified,
         createdAt = userMetadata?.creationTimestamp ?: 0,
         lastLogin = userMetadata?.lastSignInTimestamp ?: 0,
-        role = role
+        role = role,
+        shopName = shopName
     )
 }
 
@@ -141,5 +144,6 @@ private fun UserListItem.toApiUser(): ApiUser = ApiUser(
     name = displayName,
     role = role,
     createdAt = createdAt,
-    lastLogin = lastLogin
+    lastLogin = lastLogin,
+    shopName = shopName
 )

@@ -20,7 +20,13 @@ interface AuthService {
     /**
      * Creates a new user account with email, password, and mandatory phone number.
      */
-    suspend fun createUserWithEmail(email: String, password: String, phoneNumber: String, displayName: String? = "new"): AuthResult<User>
+    suspend fun createUserWithEmail(
+        email: String,
+        password: String,
+        phoneNumber: String,
+        displayName: String? = "new",
+        shopName: String? = null
+    ): AuthResult<User>
     
     // Common
     

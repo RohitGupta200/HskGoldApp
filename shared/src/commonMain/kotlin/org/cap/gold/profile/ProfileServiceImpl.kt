@@ -10,6 +10,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
+import org.cap.gold.auth.AuthService
 import org.cap.gold.model.User
 import org.cap.gold.network.NetworkClient
 
@@ -25,7 +26,9 @@ class ProfileServiceImpl(
     private data class UpdateMeRequest(
         val displayName: String? = null,
         val email: String? = null,
-        val phoneNumber: String? = null
+        val phoneNumber: String? = null,
+        val shopName: String? = null,
+        val currentPassword: String? = null
     )
 
     @Serializable
@@ -50,10 +53,10 @@ class ProfileServiceImpl(
         }
     }
 
-    override suspend fun changePhone(newPhone: String): User {
+    override suspend fun changePhone(newPhone: String,password: String): User {
         val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
             contentType(ContentType.Application.Json)
-            setBody(UpdateMeRequest(phoneNumber = newPhone))
+            setBody(UpdateMeRequest(phoneNumber = newPhone,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
             val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Phone change failed" }
@@ -63,22 +66,22 @@ class ProfileServiceImpl(
         return getMe()
     }
 
-    override suspend fun changeEmail(newEmail: String): User {
+    override suspend fun changeEmail(newEmail: String,password: String): User {
         val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
             contentType(ContentType.Application.Json)
-            setBody(UpdateMeRequest(email = newEmail))
+            setBody(UpdateMeRequest(shopName = newEmail,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
-            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Email change failed" }
-            throw IllegalStateException(msg.ifBlank { "Email change failed" })
+            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Shop change failed" }
+            throw IllegalStateException(msg.ifBlank { "Shop change failed" })
         }
         return getMe()
     }
 
-    override suspend fun changeName(newName: String): User {
+    override suspend fun changeName(newName: String,password: String): User {
         val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
             contentType(ContentType.Application.Json)
-            setBody(UpdateMeRequest(displayName = newName))
+            setBody(UpdateMeRequest(displayName = newName,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
             val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Name change failed" }

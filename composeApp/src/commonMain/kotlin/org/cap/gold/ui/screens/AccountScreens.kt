@@ -4,11 +4,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -17,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
+import org.cap.gold.auth.AuthService
 import org.cap.gold.model.User
 import org.cap.gold.profile.ProfileService
 import org.koin.compose.koinInject
@@ -40,12 +43,10 @@ fun AccountScreen(
         // Personal Information
         Text("Personal Information", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
-        Text("Name", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
-        FilledInput(
-            value = user.displayName ?: "",
-            placeholder = "",
-            onValueChange = {},
-            enabled = false
+        InlineChangeRow(
+            label = "Name",
+            value = user.displayName?:"",
+            onChangeClick = { navigator?.push(ChangeNameVoyagerScreen(currentName = user.displayName?:"")) }
         )
 
         Spacer(Modifier.height(20.dp))
@@ -58,11 +59,12 @@ fun AccountScreen(
             value = user.phoneNumber,
             onChangeClick = { navigator?.push(ChangePhoneVoyagerScreen(currentPhone = user.phoneNumber)) }
         )
-        InlineChangeRow(
-            label = "Email",
-            value = user.email ?: "",
-            onChangeClick = { navigator?.push(ChangeEmailVoyagerScreen(currentEmail = user.email ?: "")) }
-        )
+        if(!(user.role==0))
+            InlineChangeRow(
+                label = "Shop Name",
+                value = user.email ?: "",
+                onChangeClick = { navigator?.push(ChangeEmailVoyagerScreen(currentEmail = user.shopName ?: "")) }
+            )
 
         Spacer(Modifier.height(20.dp))
 
@@ -126,7 +128,7 @@ private fun FilledInput(
                 modifier = Modifier.fillMaxWidth()
             )
             if (value.isBlank() && placeholder.isNotBlank()) {
-                Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
+                Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),textAlign = TextAlign.Center)
             }
         }
     }
@@ -164,7 +166,7 @@ class ChangeEmailVoyagerScreen(private val currentEmail: String) : Screen { over
 class ChangeNameVoyagerScreen(private val currentName: String) : Screen { override val key: ScreenKey = "change_name"; @Composable override fun Content() { ChangeNameScreen(currentName) } }
 
 @Composable
-private fun ChangePasswordScreen(profile: ProfileService = koinInject()) {
+private fun ChangePasswordScreen(profile: ProfileService = koinInject(), auth: AuthService = koinInject()) {
     val navigator = LocalNavigator.current
     var current by remember { mutableStateOf("") }
     var new by remember { mutableStateOf("") }
@@ -185,6 +187,7 @@ private fun ChangePasswordScreen(profile: ProfileService = koinInject()) {
                     scope.launch {
                         try {
                             profile.changePassword(currentPassword = current, newPassword = new)
+                            auth.checkAuthState()
                             navigator?.pop()
                         } catch (e: Exception) {
                             error = e.message ?: "Failed to change password"
@@ -204,10 +207,11 @@ private fun ChangePasswordScreen(profile: ProfileService = koinInject()) {
 }
 
 @Composable
-private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = koinInject()) {
+private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = koinInject(), auth: AuthService = koinInject()) {
     val navigator = LocalNavigator.current
     var phone by remember { mutableStateOf(currentPhone) }
     var error by remember { mutableStateOf<String?>(null) }
+    var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -220,7 +224,11 @@ private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = ko
                     if (phone.isBlank()) { error = "Enter phone"; return@PrimaryPillButton }
                     loading = true
                     scope.launch {
-                        try { profile.changePhone(phone); navigator?.pop() }
+                        try {
+                            profile.changePhone(phone,password)
+                            auth.checkAuthState()
+                            navigator?.pop()
+                        }
                         catch (e: Exception) { error = e.message ?: "Failed to change phone" }
                         finally { loading = false }
                     }
@@ -229,7 +237,7 @@ private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = ko
         }
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            LabeledFilledField(label = "Enter your password", value = "", onChange = {}, password = true, enabled = false)
+            LabeledFilledField(label = "Enter your password", value = password, onChange = {password = it}, password = true, enabled = true)
             LabeledFilledField(label = "Enter new phone", value = phone, onChange = { phone = it }, keyboardType = KeyboardType.Phone)
             if (error != null) ErrorChip(error!!)
         }
@@ -237,24 +245,28 @@ private fun ChangePhoneScreen(currentPhone: String, profile: ProfileService = ko
 }
 
 @Composable
-private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = koinInject()) {
+private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = koinInject(), auth: AuthService = koinInject()) {
     val navigator = LocalNavigator.current
     var email by remember { mutableStateOf(currentEmail) }
     var error by remember { mutableStateOf<String?>(null) }
+    var password by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { TopBar(title = "Change Email", onBack = { navigator?.pop() }) },
+        topBar = { TopBar(title = "Change Shop Name", onBack = { navigator?.pop() }) },
         bottomBar = {
             Box(Modifier.fillMaxWidth().padding(16.dp)) {
-                PrimaryPillButton(text = if (loading) "Updating..." else "Update email") {
+                PrimaryPillButton(text = if (loading) "Updating..." else "Update Shop Name") {
                     error = null
-                    if (!email.contains("@")) { error = "Enter a valid email"; return@PrimaryPillButton }
                     loading = true
                     scope.launch {
-                        try { profile.changeEmail(email); navigator?.pop() }
-                        catch (e: Exception) { error = e.message ?: "Failed to change email" }
+                        try {
+                            profile.changeEmail(email,password)
+                            auth.checkAuthState()
+                            navigator?.pop()
+                        }
+                        catch (e: Exception) { error = e.message ?: "Failed to change Shop Name" }
                         finally { loading = false }
                     }
                 }
@@ -262,7 +274,7 @@ private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = ko
         }
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            LabeledFilledField(label = "Enter your password", value = "", onChange = {}, password = true, enabled = false)
+            LabeledFilledField(label = "Enter your password", value = password, onChange = {password = it}, password = true, enabled = true)
             LabeledFilledField(label = "Enter new email", value = email, onChange = { email = it }, keyboardType = KeyboardType.Email)
             if (error != null) ErrorChip(error!!)
         }
@@ -270,10 +282,12 @@ private fun ChangeEmailScreen(currentEmail: String, profile: ProfileService = ko
 }
 
 @Composable
-private fun ChangeNameScreen(currentName: String, profile: ProfileService = koinInject()) {
+private fun ChangeNameScreen(currentName: String, profile: ProfileService = koinInject(), auth: AuthService = koinInject()) {
     val navigator = LocalNavigator.current
     var name by remember { mutableStateOf(currentName) }
     var error by remember { mutableStateOf<String?>(null) }
+    var password by remember { mutableStateOf("") }
+
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -286,7 +300,11 @@ private fun ChangeNameScreen(currentName: String, profile: ProfileService = koin
                     if (name.isBlank()) { error = "Enter name"; return@PrimaryPillButton }
                     loading = true
                     scope.launch {
-                        try { profile.changeName(name); navigator?.pop() }
+                        try {
+                            profile.changeName(name,password)
+                            auth.checkAuthState()
+                            navigator?.pop()
+                        }
                         catch (e: Exception) { error = e.message ?: "Failed to change name" }
                         finally { loading = false }
                     }
@@ -295,6 +313,7 @@ private fun ChangeNameScreen(currentName: String, profile: ProfileService = koin
         }
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            LabeledFilledField(label = "Enter your password", value = password, onChange = {password = it}, password = true, enabled = true)
             LabeledFilledField(label = "Name", value = name, onChange = { name = it })
             if (error != null) ErrorChip(error!!)
         }

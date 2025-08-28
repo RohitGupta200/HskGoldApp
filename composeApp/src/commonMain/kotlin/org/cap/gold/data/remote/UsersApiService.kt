@@ -32,6 +32,7 @@ private data class ServerUser(
     val isEmailVerified: Boolean = false,
     val name: String? = null,
     val role: Int = 3,
+    val shopName: String? = null,
     val createdAt: Long = 0,
     val lastLogin: Long = 0
 )
@@ -76,6 +77,7 @@ private fun ServerUser.toUser(): User = User(
     isEmailVerified = isEmailVerified,
     name = name ?: displayName,
     role = role,
+    shopName = shopName,
     createdAt = createdAt,
     lastLogin = lastLogin
 )

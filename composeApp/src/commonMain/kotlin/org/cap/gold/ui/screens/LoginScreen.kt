@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -19,7 +18,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -54,7 +52,7 @@ fun LoginScreen(
     var isSignUp by remember { mutableStateOf(false) }
     var signupName by remember { mutableStateOf("") }
     var signupPhone by remember { mutableStateOf("") }
-    var shopeName by remember { mutableStateOf("") }
+    var shopName by remember { mutableStateOf("") }
     // Use an independent scope so login work isn't cancelled when this composable leaves composition
     val coroutineScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     DisposableEffect(Unit) {
@@ -93,7 +91,8 @@ fun LoginScreen(
         coroutineScope.launch {
             try {
                 val result = if (isSignUp) {
-                    authService.createUserWithEmail(email, password, signupPhone, signupName)
+                    val shop = shopName.takeIf { it.isNotBlank() }
+                    authService.createUserWithEmail(email, password, signupPhone, signupName, shop)
                 } else {
                     authService.signInWithEmail(email, password)
                 }
@@ -177,8 +176,8 @@ fun LoginScreen(
             // Phone (signup only)
             if (isSignUp) {
                 OutlinedTextField(
-                    value = shopeName,
-                    onValueChange = { shopeName = it },
+                    value = shopName,
+                    onValueChange = { shopName = it },
                     label = { Text("Shop Name (Optional)") },
                     singleLine = true,
                     enabled = !isLoading,
@@ -335,7 +334,8 @@ fun LoginScreenPreview() {
                     email: String,
                     password: String,
                     phoneNumber: String,
-                    displayName: String?
+                    displayName: String?,
+                    shopName: String?
                 ): AuthResult<User> {
                     val user = User(
                         id = "new-user",

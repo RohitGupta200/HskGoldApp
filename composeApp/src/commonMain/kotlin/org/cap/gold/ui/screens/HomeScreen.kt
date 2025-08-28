@@ -37,6 +37,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun HomeScreen(
     user: User,
+    selectedRoute: String,
+    onSelectRoute: (String) -> Unit,
     onLogout: () -> Unit
 ) {
     val navigator = LocalNavigator.current
@@ -59,15 +61,28 @@ fun HomeScreen(
     }
 
     // Build bottom bar screens: always include Products first; include Users only for admins
-    val screens = remember(user) {
+    val rawScreens: List<AppScreen> = remember(user) {
         val others = AppScreen.items.filter { screen ->
             screen != AppScreen.Products && (screen != AppScreen.Users || user.role == 0)
         }
         val built = listOf(AppScreen.Products) + others
         if (built.isNotEmpty()) built else listOf(AppScreen.Products, AppScreen.Orders, AppScreen.Profile)
     }
+    // Extra safety in case a transient null leaks in from recomposition
+    val screens: List<AppScreen> = remember(rawScreens) { rawScreens.mapNotNull { it }.distinct() }
+    // Resolve current screen from selected route with guard rails
+    val currentScreen: AppScreen = remember(selectedRoute, screens) {
+        screens.firstOrNull { it.route == selectedRoute } ?: screens.firstOrNull() ?: AppScreen.Products
+    }
 
-    val currentScreen = remember(screens) { mutableStateOf<AppScreen?>(screens.firstOrNull()) }
+    // If the selected route is not available (e.g., role change removed a tab), realign selection
+    LaunchedEffect(screens, selectedRoute) {
+        val exists = screens.any { it.route == selectedRoute }
+        val target = if (exists) selectedRoute else screens.firstOrNull()?.route ?: AppScreen.Products.route
+        if (target != selectedRoute) {
+            onSelectRoute(target)
+        }
+    }
 
     // Main content with bottom navigation
     Scaffold(
@@ -77,19 +92,9 @@ fun HomeScreen(
         bottomBar = {
             BottomNavigationBar(
                 screens = screens,
-                currentRoute = currentScreen.value?.route ?: screens.first().route,
+                currentRoute = currentScreen.route,
                 onNavigate = { route ->
-                    // Defensive lookup that never dereferences null
-                    val target = try {
-                        screens.firstOrNull { it.route == route } ?: screens.firstOrNull()
-                    } catch (_: Exception) {
-                        null
-                    }
-                    val screen = target ?: AppScreen.Products
-                    if (screen.route != (currentScreen.value?.route ?: "")) {
-                        // Only update the selected tab; do not push onto the back stack
-                        currentScreen.value = screen
-                    }
+                    onSelectRoute(route)
                 }
             )
         }
@@ -101,11 +106,12 @@ fun HomeScreen(
                 .padding(innerPadding)
         ) {
             // Display the current screen based on the route
-            when (val screen = currentScreen.value ?: AppScreen.Products) {
+            when (val screen = currentScreen) {
                 is AppScreen.Products -> ProductsScreen(user = user, navigator = navigator)
                 is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen()
-                is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
                 is AppScreen.Users -> if (user.role == 0) UsersScreen() else {}
+                is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
+
             }
         }
     }
@@ -123,21 +129,25 @@ private fun BottomNavigationBar(
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         screens.forEach { screen ->
+            // Defensive guard in case a transient null/invalid item appears during recomposition
+            val route = try { screen.route } catch (_: Throwable) { return@forEach }
+            val title = try { screen.title } catch (_: Throwable) { return@forEach }
+            val icon = try { screen.icon } catch (_: Throwable) { return@forEach }
             NavigationBarItem(
                 icon = { 
                     Icon(
-                        imageVector = screen.icon, 
-                        contentDescription = screen.title
+                        imageVector = icon, 
+                        contentDescription = title
                     ) 
                 },
                 label = { 
                     Text(
-                        text = screen.title,
+                        text = title,
                         style = MaterialTheme.typography.labelSmall
                     ) 
                 },
-                selected = currentRoute == screen.route,
-                onClick = { onNavigate(screen.route) },
+                selected = currentRoute == route,
+                onClick = { onNavigate(route) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,

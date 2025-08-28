@@ -76,6 +76,6 @@ sealed class AppScreen(
     )
     
     companion object {
-        val items = listOf(Products, Orders, Profile, Users)
+        val items = listOf(Products, Orders,Users, Profile )
     }
 }

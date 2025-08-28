@@ -349,6 +349,8 @@ class AuthController(
                     return@post
                 }
 
+                    println("shopName: ${request.shopName}")
+
                 try {
                     val normalizedPhone = normalizeIndianPhone(request.phoneNumber)
                     // Create user in Firebase with email, phone, and password
@@ -359,9 +361,12 @@ class AuthController(
                             .setPhoneNumber(normalizedPhone)
                             .setDisplayName(request.displayName)
                     )
-
-                    // Default role = 2 (unapproved). Save in custom claims.
-                    val claims = mapOf("role" to 2)
+                    // Default role = 2 (unapproved). Save in custom claims, include shopName when provided.
+                    val claims = buildMap<String, Any> {
+                        put("role", 2)
+                        val shop = request.shopName?.trim()
+                        if (!shop.isNullOrEmpty()) put("shopName", shop)
+                    }
                     firebaseAuth.setCustomUserClaims(userRecord.uid, claims)
 
                     // Build tokens (JWT + refresh)
@@ -653,12 +658,24 @@ class AuthController(
                 
                 val request = call.receive<UpdateUserRequest>()
                 val updates = mutableMapOf<String, Any>()
+                val user = firebaseAuth.getUser(userId)
+
+                firebaseWebApiKey?.let {
+
+                    request.currentPassword?.let { password ->
+                        if(!verifyWithFirebaseIdentity(user.email,password,it)) {
+                            throw InvalidCredentialsException()
+                        }
+                    }?: throw UnauthorizedException("Required current password")
+                }?: throw UnauthorizedException("Invalid or expired token")
                 
                 request.displayName?.let { updates["displayName"] = it }
                 request.email?.let { updates["email"] = it }
                 request.phoneNumber?.let { updates["email"] = it + "@test.com"
                     updates["phoneNumber"] = it }
                 request.photoUrl?.let { updates["photoUrl"] = it }
+                request.shopName?.let { updates["CustomToken"] = user.customClaims
+                user.customClaims["shopName"] = it}
                 
                 // Update user in Firebase
                 val updateRequest = UserRecord.UpdateRequest(userId)
@@ -683,13 +700,21 @@ class AuthController(
                     ?: throw UnauthorizedException("Invalid or expired token")
                     
                 val userId = decodedToken.subject
-                
+                val user = firebaseAuth.getUser(userId)
+
                 val request = call.receive<ChangePasswordRequest>()
-                
+                firebaseWebApiKey?.let {
+
+                    if(!verifyWithFirebaseIdentity(user.email,request.currentPassword,it))
+                    {
+                        throw InvalidCredentialsException()
+                    }
+                }
                 if (request.newPassword.isBlank() || request.newPassword.length < 6) {
                     throw BadRequestException("New password must be at least 6 characters long")
                 }
-                
+
+
                 // In a real app, verify the current password before changing
                 // For demo, we'll just update the password
                 val updatedUser = userRepository.updateUser(

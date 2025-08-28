@@ -144,7 +144,7 @@ class OrderController(private val firebaseAuth: FirebaseAuth, private val orderR
                 val query = qp["query"]?.takeIf { it.isNotBlank() }
                 val status = qp["status"]?.let { runCatching { OrderStatus.valueOf(it.uppercase()) }.getOrNull() }
                 val statusGroup = qp["statusGroup"]?.let { runCatching { OrderStatusGroup.valueOf(it.uppercase()) }.getOrNull() }
-                if(user.customClaims["role"] == 0) {
+                if(user.customClaims["role"].toString() == "0") {
                     val (orders, total) = orderRepository.searchOrders(
                         query = query,
                         page = page,

@@ -107,6 +107,8 @@ data class UpdateUserRequest(
     val phoneNumber: String? = null,
     val photoUrl: String? = null,
     val disabled: Boolean? = null,
+    val shopName: String? = null,
+    val currentPassword: String? = null,
     val customClaims: Map<String, @Contextual Any>? = null
 )
 
@@ -123,11 +125,13 @@ data class UserResponse(
     val disabled: Boolean = false,
     val emailVerified: Boolean = false,
     val metadata: User.Metadata = User.Metadata(),
-    val role: Int = 3
+    val role: Int = 3,
+    val shopName: String? = null
 ) {
     companion object {
         fun fromUser(user: User): UserResponse {
             val role = (user.customClaims["role"] as? Number)?.toInt() ?: 3
+            val shopName = (user.customClaims["shopName"] as? String)
             return UserResponse(
                 id = user.id,
                 phoneNumber = user.phoneNumber,
@@ -137,7 +141,8 @@ data class UserResponse(
                 disabled = user.disabled,
                 emailVerified = user.emailVerified,
                 metadata = user.metadata,
-                role = role
+                role = role,
+                shopName = shopName
             )
         }
     }
