@@ -191,7 +191,7 @@ fun LoginScreen(
                     enabled = !isLoading,
                     isError = errorMessage != null,
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
+                        keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Done
                     ),
                     modifier = Modifier

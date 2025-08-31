@@ -17,6 +17,9 @@ abstract class BaseProductTable(tableName: String) : UUIDTable(tableName) {
     val purity = varchar("purity", 50)
     val maxQuantity = integer("max_quantity")
     val category = varchar("category", 100)
+    // Pricing controls
+    val margin = double("margin").default(0.0)
+    val multiplier = double("multiplier").default(1.0)
     // JSON string or any string payload carrying custom fields from client
     val customFields = text("custom_fields").default("")
     val createdAt = datetime("created_at").default(LocalDateTime.now())
@@ -45,6 +48,8 @@ interface Product {
     val name: String
     val description: String
     val price: Double
+    val margin: Double
+    val multiplier: Double
     val weight: String
     val dimension: String
     val purity: String
@@ -60,6 +65,8 @@ interface ProductForList{
     val id: UUID
     val name: String
     val price: Double
+    val margin: Double
+    val multiplier: Double
     val category: String
 }
 
@@ -69,6 +76,8 @@ data class ApprovedProduct(
     override val name: String,
     override val description: String,
     override val price: Double,
+    override val margin: Double,
+    override val multiplier: Double,
     override val weight: String,
     override val dimension: String,
     override val purity: String,
@@ -84,6 +93,8 @@ data class UnapprovedProduct(
     override val name: String,
     override val description: String,
     override val price: Double,
+    override val margin: Double,
+    override val multiplier: Double,
     override val weight: String,
     override val dimension: String,
     override val purity: String,
@@ -99,6 +110,8 @@ data class ProductWithOutImageForList(
     override val id: UUID,
     override val name: String,
     override val price: Double,
+    override val margin: Double,
+    override val multiplier: Double,
     override val category: String,
 ) : ProductForList
 
@@ -108,6 +121,8 @@ fun ResultRow.toApprovedProduct() = ApprovedProduct(
     name = this[ProductsApproved.name],
     description = this[ProductsApproved.description],
     price = this[ProductsApproved.price],
+    margin = this[ProductsApproved.margin],
+    multiplier = this[ProductsApproved.multiplier],
     weight = this[ProductsApproved.weight],
     dimension = this[ProductsApproved.dimension],
     purity = this[ProductsApproved.purity],
@@ -123,6 +138,8 @@ fun ResultRow.toUnapprovedProduct() = UnapprovedProduct(
     name = this[ProductsUnapproved.name],
     description = this[ProductsUnapproved.description],
     price = this[ProductsUnapproved.price],
+    margin = this[ProductsUnapproved.margin],
+    multiplier = this[ProductsUnapproved.multiplier],
     weight = this[ProductsUnapproved.weight],
     dimension = this[ProductsUnapproved.dimension],
     purity = this[ProductsUnapproved.purity],
@@ -137,6 +154,8 @@ fun ResultRow.toProductWithOutImage() = ProductWithOutImageForList(
     id = this[ProductsApproved.id].value,
     name = this[ProductsApproved.name],
     price = this[ProductsApproved.price],
+    margin = this[ProductsApproved.margin],
+    multiplier = this[ProductsApproved.multiplier],
     category = this[ProductsApproved.category],
 
 )
@@ -145,6 +164,8 @@ fun ResultRow.toUnapprovedProductWithOutImage() = ProductWithOutImageForList(
     id = this[ProductsUnapproved.id].value,
     name = this[ProductsUnapproved.name],
     price = this[ProductsUnapproved.price],
+    margin = this[ProductsUnapproved.margin],
+    multiplier = this[ProductsUnapproved.multiplier],
     category = this[ProductsUnapproved.category],
 
 )

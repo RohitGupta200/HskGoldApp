@@ -79,10 +79,12 @@ fun ProductItem(
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            val calculatedPrice= (product.price+product.margin)*product.multiplier
             
             // Product Price
             Text(
-                text = "₹${product.price}",
+                text = "₹${calculatedPrice}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 2.dp)

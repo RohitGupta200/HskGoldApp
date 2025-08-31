@@ -27,6 +27,8 @@ data class SimpleProductResponse(
     val name: String = "",
     val description: String = "",
     val price: Double,
+    val margin: Double = 0.0,
+    val multiplier: Double = 1.0,
     val weight: String,
     val dimension: String,
     val purity: String,
@@ -43,6 +45,8 @@ data class ListProductResponse(
     val id: String? = null,
     val name: String = "",
     val price: Double? = 0.0,
+    val margin: Double? = 0.0,
+    val multiplier: Double? = 1.0,
     val category: String? = "",
 )
 
@@ -78,7 +82,8 @@ interface ProductApiService {
         imageFileName: String? = null,
         imageContentType: ContentType = ContentType.Image.Any,
         approvedCustomFields: String? = null,
-        unapprovedCustomFields: String? = null
+        unapprovedCustomFields: String? = null,
+        applyToAll: Boolean = false
     ): String
     suspend fun updateBothVariants(
         id: String,
@@ -88,7 +93,8 @@ interface ProductApiService {
         imageFileName: String? = null,
         imageContentType: ContentType = ContentType.Image.Any,
         approvedCustomFields: String? = null,
-        unapprovedCustomFields: String? = null
+        unapprovedCustomFields: String? = null,
+        applyToAll: Boolean = false
     ): String
     // Order-related (stub for now)
     suspend fun createOrder(
@@ -177,18 +183,22 @@ class ProductApiServiceImpl(
         val name: String,
         val description: String,
         val price: Double,
+        val margin: Double = 0.0,
+        val multiplier: Double = 1.0,
         val weight: String,
         val dimension: String,
         val purity: String,
         val maxQuantity: Int,
         val category: String,
-        val customFields: String = ""
+        val customFields: String = "",
     )
 
     private fun SimpleProductResponse.toProduct(id: String): Product = Product(
         id = id,
         name = this.name,
         price = this.price,
+        margin = this.margin,
+        multiplier = this.multiplier,
         imageUrl = "",
         imageBase64 = this.imageBase64,
         category = this.category,
@@ -203,6 +213,8 @@ class ProductApiServiceImpl(
         id = id,
         name = this.name,
         price = this.price?:0.0,
+        margin = this.margin?:0.0,
+        multiplier = this.multiplier?:1.0,
         category = this.category?:"Uncategorized",
     )
 
@@ -212,13 +224,16 @@ class ProductApiServiceImpl(
     private data class UpsertBothRequest(
         val id: String? = null,
         val approved: ProductPayload? = null,
-        val unapproved: ProductPayload? = null
+        val unapproved: ProductPayload? = null,
+        val applyToAll: Boolean? = false
     )
 
     private fun Product.toPayload(customFields: String? = null): ProductPayload = ProductPayload(
         name = this.name,
         description = this.description,
         price = this.price,
+        margin = this.margin,
+        multiplier = this.multiplier,
         weight = this.weight,
         dimension = this.dimension,
         purity = this.purity,
@@ -281,12 +296,14 @@ class ProductApiServiceImpl(
         imageFileName: String?,
         imageContentType: ContentType,
         approvedCustomFields: String?,
-        unapprovedCustomFields: String?
+        unapprovedCustomFields: String?,
+        applyToAll: Boolean
     ): String {
         val payload = UpsertBothRequest(
             id = id,
             approved = approved?.toPayload(approvedCustomFields),
-            unapproved = unapproved?.toPayload(unapprovedCustomFields)
+            unapproved = unapproved?.toPayload(unapprovedCustomFields),
+            applyToAll = applyToAll
         )
         val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
             val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)
@@ -338,11 +355,13 @@ class ProductApiServiceImpl(
         imageFileName: String?,
         imageContentType: ContentType,
         approvedCustomFields: String?,
-        unapprovedCustomFields: String?
+        unapprovedCustomFields: String?,
+        applyToAll: Boolean
     ): String {
         val payload = UpsertBothRequest(
             approved = approved?.toPayload(approvedCustomFields),
-            unapproved = unapproved?.toPayload(unapprovedCustomFields)
+            unapproved = unapproved?.toPayload(unapprovedCustomFields),
+            applyToAll = applyToAll
         )
         val resp: HttpResponse = if (imageBytes != null && imageFileName != null) {
             val json = Json.encodeToString(UpsertBothRequest.serializer(), payload)

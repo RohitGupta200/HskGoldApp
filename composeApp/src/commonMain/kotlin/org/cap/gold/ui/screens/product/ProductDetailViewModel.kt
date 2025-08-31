@@ -108,7 +108,9 @@ class ProductDetailViewModel(
                             weight = both.approved.weight,
                             purity = both.approved.purity,
                             dimension = both.approved.dimension,
-                            maxQuantity = both.approved.maxQuantity
+                            maxQuantity = both.approved.maxQuantity,
+                            multiplier = both.approved.multiplier,
+                            margin = both.approved.margin
                         )
                         both.unapproved != null -> Product(
                             id = productId,
@@ -121,22 +123,26 @@ class ProductDetailViewModel(
                             weight = both.unapproved.weight,
                             purity = both.unapproved.purity,
                             dimension = both.unapproved.dimension,
-                            maxQuantity = both.unapproved.maxQuantity
+                            maxQuantity = both.unapproved.maxQuantity,
+                            multiplier = both.unapproved.multiplier,
+                            margin = both.unapproved.margin
                         )
                         else -> null
                     }
                     unapprovedProduct = if(both?.unapproved != null) Product(
-                    id = productId,
-                    name = both.unapproved.name,
-                    price = both.unapproved.price,
-                    imageUrl = "",
-                    imageBase64 = both.unapproved.imageBase64,
-                    category = both.unapproved.category,
-                    description = both.unapproved.description,
-                    weight = both.unapproved.weight,
-                    purity = both.unapproved.purity,
-                    dimension = both.unapproved.dimension,
-                    maxQuantity = both.unapproved.maxQuantity
+                        id = productId,
+                        name = both.unapproved.name,
+                        price = both.unapproved.price,
+                        imageUrl = "",
+                        imageBase64 = both.unapproved.imageBase64,
+                        category = both.unapproved.category,
+                        description = both.unapproved.description,
+                        weight = both.unapproved.weight,
+                        purity = both.unapproved.purity,
+                        dimension = both.unapproved.dimension,
+                        maxQuantity = both.unapproved.maxQuantity,
+                        multiplier = both.unapproved.multiplier,
+                        margin = both.unapproved.margin
                     )
                     else null
                     // Populate fields from customFields JSON
@@ -324,9 +330,7 @@ class ProductDetailViewModel(
                 val fieldsJson = buildCustomFieldsJson()
                 // If requested, copy price from approved to unapproved before save
                 val approvedFinal = approved
-                val unapprovedFinal = if (syncPrices && approvedFinal != null && unapproved != null) {
-                    unapproved.copy(price = approvedFinal.price)
-                } else unapproved
+                val unapprovedFinal = unapproved
                 if (isCreateMode) {
                     val newId = productApiService.createBothVariants(
                         id = null,
@@ -335,7 +339,8 @@ class ProductDetailViewModel(
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
                         approvedCustomFields = approvedFinal?.let { fieldsJson },
-                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson }
+                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson },
+                        applyToAll = syncPrices
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(newId) }.getOrNull()
@@ -376,7 +381,8 @@ class ProductDetailViewModel(
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
                         approvedCustomFields = approvedFinal?.let { fieldsJson },
-                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson }
+                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson },
+                        applyToAll = syncPrices
                     )
                     // Reload preferring approved
                     val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()

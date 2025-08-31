@@ -348,8 +348,8 @@ fun ProductDetailScreen(
     // Show order success dialog
     if (orderSuccess) {
         SuccessDialog(
-            title = "Order Placed Successfully!",
-            message = "Your order has been placed successfully. We'll contact you soon.",
+            title = "Order request sent!",
+            message = "We will confirm your order soon.",
             onDismiss = { onOrderSuccess("") }
         )
     }
@@ -583,32 +583,59 @@ private fun ProductContent(
                 onCheckedChange = { viewModel.syncPrices = it },
                 onChange = { v ->
                     val d = v.toDoubleOrNull() ?: 0.0
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(price = d) else unapprovedDraft = draft.copy(price = d)
+                    if (activeType == VariantType.APPROVED) {approvedDraft =
+                        draft.copy(price = d)
+                        if(viewModel.isCreateMode && (unapprovedDraft.price == null || unapprovedDraft.price == 0.0))
+                            unapprovedDraft = draft.copy(price = d)
+                    } else unapprovedDraft = draft.copy(price = d)
                 },
                 placeholder = "Add price",
                 keyboardType = KeyboardType.Number,
             )
+            Spacer(modifier = Modifier.height(8.dp))
 
-//            EditableDetailRow(
-//                label = "Discount",
-//                value = draft.purity,
-//                placeholder = "Add Discount",
-//                onChange = {
-//                    if (activeType == VariantType.APPROVED) approvedDraft =
-//                        draft.copy(purity = it) else unapprovedDraft = draft.copy(purity = it)
-//                }
-//            )
+            EditableDetailRow(
+                label = "Margin",
+                value = draft.margin.takeIf { !it.isNaN() }?.toString() ?: "",
+                placeholder = "Add Margin",
+                keyboardType = KeyboardType.Number,
+                onChange = {
+                    if(!it.isEmpty())
+                    if (activeType == VariantType.APPROVED){ approvedDraft =
+                        draft.copy(margin = it.toDouble())
+                        if(viewModel.isCreateMode && (unapprovedDraft.margin == null || unapprovedDraft.margin == 0.0))
+                            unapprovedDraft = draft.copy(margin = it.toDouble())
+                    } else unapprovedDraft = draft.copy(margin = it.toDouble())
+                }
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            EditableDetailRow(
+                label = "Multiplier",
+                value = draft.multiplier.takeIf { !it.isNaN() }?.toString() ?: "",
+                placeholder = "Add Multiplier",
+                keyboardType = KeyboardType.Number,
+                onChange = {
+                    if(!it.isEmpty())
+                        if (activeType == VariantType.APPROVED){ approvedDraft =
+                            draft.copy(multiplier = it.toDouble())
+                            if(viewModel.isCreateMode && (unapprovedDraft.multiplier == null || unapprovedDraft.multiplier == 0.0))
+                                unapprovedDraft = draft.copy(multiplier = it.toDouble())
+                        } else unapprovedDraft = draft.copy(multiplier = it.toDouble())
+                }
+            )
 
             EditableDetailRow(
                 label = "Purity",
                 value = draft.purity,
                 placeholder = "Add purity",
                 onChange = {
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(purity = it) else unapprovedDraft = draft.copy(purity = it)
+                    if (activeType == VariantType.APPROVED) {approvedDraft =
+                        draft.copy(purity = it)
+                        if(viewModel.isCreateMode && (unapprovedDraft.purity.isNullOrEmpty()))
+                            unapprovedDraft = draft.copy(purity = it)
+                    }else unapprovedDraft = draft.copy(purity = it)
                 }
             )
 
@@ -620,8 +647,11 @@ private fun ProductContent(
                 placeholder = "Add weight",
                 keyboardType = KeyboardType.Text,
                 onChange = { v ->
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(weight = v) else unapprovedDraft = draft.copy(weight = v)
+                    if (activeType == VariantType.APPROVED){ approvedDraft =
+                        draft.copy(weight = v)
+                        if(viewModel.isCreateMode && (unapprovedDraft.weight.isNullOrEmpty()))
+                            unapprovedDraft = draft.copy(weight = v)
+                    }else unapprovedDraft = draft.copy(weight = v)
                 }
             )
 
@@ -632,8 +662,11 @@ private fun ProductContent(
                 value = draft.dimension,
                 placeholder = "Add dimensions",
                 onChange = {
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(dimension = it) else unapprovedDraft = draft.copy(dimension = it)
+                    if (activeType == VariantType.APPROVED){ approvedDraft =
+                        draft.copy(dimension = it)
+                        if(viewModel.isCreateMode && (unapprovedDraft.dimension.isNullOrEmpty()))
+                            unapprovedDraft = draft.copy(dimension = it)
+                    } else unapprovedDraft = draft.copy(dimension = it)
                 }
             )
 
@@ -646,8 +679,11 @@ private fun ProductContent(
                 keyboardType = KeyboardType.Number,
                 onChange = { v ->
                     val mq = v.toIntOrNull() ?: 1
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(maxQuantity = mq) else unapprovedDraft =
+                    if (activeType == VariantType.APPROVED){ approvedDraft =
+                        draft.copy(maxQuantity = mq)
+                        if(viewModel.isCreateMode && (unapprovedDraft.maxQuantity == 0 || unapprovedDraft.maxQuantity == null))
+                            unapprovedDraft = draft.copy(maxQuantity = mq)
+                    } else unapprovedDraft =
                         draft.copy(maxQuantity = mq)
                 }
             )
@@ -660,8 +696,11 @@ private fun ProductContent(
                 valueText = draft.category.ifBlank { "Select" },
                 options = categories,
                 onSelected = { sel ->
-                    if (activeType == VariantType.APPROVED) approvedDraft =
-                        draft.copy(category = sel) else unapprovedDraft = draft.copy(category = sel)
+                    if (activeType == VariantType.APPROVED){ approvedDraft =
+                        draft.copy(category = sel)
+                        if(viewModel.isCreateMode && (unapprovedDraft.category.isNullOrEmpty()))
+                            unapprovedDraft = draft.copy(category = sel)
+                    } else unapprovedDraft = draft.copy(category = sel)
                 }
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -779,7 +818,8 @@ private fun ProductContent(
             Spacer(modifier = Modifier.height(8.dp))
             DottedDivider()
             Spacer(modifier = Modifier.height(8.dp))
-            ProductDetailRow("Price", "₹${product.price}")
+            val calculatedPrice= (product.price+product.margin)*product.multiplier
+            ProductDetailRow("Price", "₹${calculatedPrice}")
             DottedDivider()
             ProductDetailRow("Purity", product.purity)
             DottedDivider()

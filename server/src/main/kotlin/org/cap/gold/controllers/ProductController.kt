@@ -27,6 +27,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double = 0.0,
+            val multiplier: Double = 1.0,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -41,6 +43,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double = 0.0,
+            val multiplier: Double = 1.0,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -53,7 +57,8 @@ class ProductController(
         data class UpsertBothRequest(
             val id: String? = null,
             val approved: ProductPayload? = null,
-            val unapproved: ProductPayload? = null
+            val unapproved: ProductPayload? = null,
+            val applyToAll: Boolean? = false
         )
 
         // Update DTO to avoid receiving domain models with LocalDateTime
@@ -62,6 +67,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double = 0.0,
+            val multiplier: Double = 1.0,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -77,6 +84,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double,
+            val multiplier: Double,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -94,6 +103,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double,
+            val multiplier: Double,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -111,6 +122,8 @@ class ProductController(
             val name: String,
             val description: String,
             val price: Double,
+            val margin: Double,
+            val multiplier: Double,
             val weight: String,
             val dimension: String,
             val purity: String,
@@ -126,9 +139,9 @@ class ProductController(
         data class ProductListResponse(
             val id: String,
             val name: String,
-
             val price: Double,
-
+            val margin: Double,
+            val multiplier: Double,
             val category: String,
         )
 
@@ -137,6 +150,8 @@ class ProductController(
             name = name,
             description = description,
             price = price,
+            margin = margin,
+            multiplier = multiplier,
             weight = weight,
             dimension = dimension,
             purity = purity,
@@ -153,6 +168,8 @@ class ProductController(
             name = name,
             description = description,
             price = price,
+            margin = margin,
+            multiplier = multiplier,
             weight = weight,
             dimension = dimension,
             purity = purity,
@@ -168,6 +185,8 @@ class ProductController(
             id = id.toString(),
             name = name,
             price = price,
+            margin = margin,
+            multiplier = multiplier,
             category = category,
         )
 
@@ -237,6 +256,8 @@ class ProductController(
                             name = it.name,
                             description = it.description,
                             price = it.price,
+                            margin = it.margin,
+                            multiplier = it.multiplier,
                             weight = it.weight,
                             dimension = it.dimension,
                             purity = it.purity,
@@ -253,6 +274,8 @@ class ProductController(
                             name = it.name,
                             description = it.description,
                             price = it.price,
+                            margin = it.margin,
+                            multiplier = it.multiplier,
                             weight = it.weight,
                             dimension = it.dimension,
                             purity = it.purity,
@@ -269,6 +292,17 @@ class ProductController(
                         unapproved = unapprovedModel,
                         isCreate = true
                     )
+                    // If requested, apply this price to all products in the same category (both tables)
+                    if (req!!.applyToAll == true) {
+                        val categoryAndPriceApproved = approvedModel?.let { it.category to it.price }
+                        val categoryAndPriceUnApproved = unapprovedModel?.let { it.category to it.price }
+                        categoryAndPriceApproved?.let { (cat, price) ->
+                            productRepository.updateAllApprovedPricesByCategory(cat, price)
+                        }
+                        categoryAndPriceUnApproved?.let { (cat, price) ->
+                            productRepository.updateAllUnapprovedPricesByCategory(cat, price)
+                        }
+                    }
                     imageBytes?.let { productRepository.upsertImage(id, it) }
                     // Fire and forget: notify admins that products have changed
 
@@ -314,6 +348,8 @@ class ProductController(
                             name = it.name,
                             description = it.description,
                             price = it.price,
+                            margin = it.margin,
+                            multiplier = it.multiplier,
                             weight = it.weight,
                             dimension = it.dimension,
                             purity = it.purity,
@@ -331,6 +367,8 @@ class ProductController(
                             name = it.name,
                             description = it.description,
                             price = it.price,
+                            margin = it.margin,
+                            multiplier = it.multiplier,
                             weight = it.weight,
                             dimension = it.dimension,
                             purity = it.purity,
@@ -347,6 +385,17 @@ class ProductController(
                         unapproved = unapprovedModel,
                         isCreate = false
                     )
+                    // If requested, apply this price to all products in the same category (both tables)
+                    if (req!!.applyToAll == true) {
+                        val categoryAndPriceApproved = approvedModel?.let { it.category to it.price }
+                        val categoryAndPriceUnApproved = unapprovedModel?.let { it.category to it.price }
+                        categoryAndPriceApproved?.let { (cat, price) ->
+                            productRepository.updateAllApprovedPricesByCategory(cat, price)
+                        }
+                        categoryAndPriceUnApproved?.let { (cat, price) ->
+                            productRepository.updateAllUnapprovedPricesByCategory(cat, price)
+                        }
+                    }
                     imageBytes?.let { productRepository.upsertImage(id, it) }
                     // Fire and forget: notify admins that products have changed
 
@@ -377,6 +426,8 @@ class ProductController(
                         name = req.name,
                         description = req.description,
                         price = req.price,
+                        margin = req.margin,
+                        multiplier = req.multiplier,
                         weight = req.weight,
                         dimension = req.dimension,
                         purity = req.purity,
@@ -418,6 +469,8 @@ class ProductController(
                         name = dto.name,
                         description = dto.description,
                         price = dto.price,
+                        margin = dto.margin,
+                        multiplier = dto.multiplier,
                         weight = dto.weight,
                         dimension = dto.dimension,
                         purity = dto.purity,
@@ -480,6 +533,8 @@ class ProductController(
                         name = req.name,
                         description = req.description,
                         price = req.price,
+                        margin = req.margin,
+                        multiplier = req.multiplier,
                         weight = req.weight,
                         dimension = req.dimension,
                         purity = req.purity,
@@ -508,6 +563,8 @@ class ProductController(
                         name = dto.name,
                         description = dto.description,
                         price = dto.price,
+                        margin = dto.margin,
+                        multiplier = dto.multiplier,
                         weight = dto.weight,
                         dimension = dto.dimension,
                         purity = dto.purity,

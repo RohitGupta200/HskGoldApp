@@ -7,6 +7,8 @@ data class Product(
     val id: String,
     val name: String = "",
     val price: Double,
+    val margin: Double = 0.0,
+    val multiplier: Double = 1.0,
     val imageUrl: String = "https://via.placeholder.com/150", // Default placeholder image
     val imageBase64: String? = null,
     val category: String = "",
@@ -22,6 +24,8 @@ data class ListProduct(
     val id: String,
     val name: String = "",
     val price: Double,
+    val margin: Double = 0.0,
+    val multiplier: Double = 1.0,
     val category: String = "",
 
 )

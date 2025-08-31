@@ -182,18 +182,40 @@ fun OrderItem(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = if (order.quantity == 1) "1 item" else "${order.quantity} items",
+                text = if (order.quantity == 1) "1 item" else "${order.quantity} items" + "• ${order.formattedDate}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
         }
 
-        // Right: total amount
-        Text(
-            text = "₹ ${formatAmount(order.totalAmount)}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+        Column(modifier = Modifier.weight(.4f), horizontalAlignment = Alignment.End) {
+            // Right: total amount
+            Text(
+                text = "₹ ${formatAmount(order.totalAmount)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(2.dp))
+            val amountColor = when (order.status) {
+                OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
+                OrderStatus.PENDING -> Color(0xFFFF6D00)
+                OrderStatus.CANCELLED -> Color(0xFFF44336)
+                OrderStatus.SHIPPED -> Color(0xFF1E88E5)
+                OrderStatus.DELIVERED -> Color(0xFF2E7D32)
+            }
+            val text = when (order.status) {
+                OrderStatus.CONFIRMED -> "Confirmed"
+                OrderStatus.PENDING -> "Pending"
+                OrderStatus.CANCELLED -> "Cancelled"
+                OrderStatus.SHIPPED -> "Shipped"
+                OrderStatus.DELIVERED -> "Delivered"
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = amountColor
+            )
+        }
     }
 }
 

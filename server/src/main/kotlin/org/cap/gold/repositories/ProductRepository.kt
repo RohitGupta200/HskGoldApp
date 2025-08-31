@@ -15,6 +15,8 @@ class ProductRepository {
             it[name] = product.name
             it[description] = product.description
             it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
             it[weight] = product.weight
             it[dimension] = product.dimension
             it[purity] = product.purity
@@ -30,6 +32,8 @@ class ProductRepository {
             it[name] = product.name
             it[description] = product.description
             it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
             it[weight] = product.weight
             it[dimension] = product.dimension
             it[purity] = product.purity
@@ -41,6 +45,23 @@ class ProductRepository {
         product.copy(id = id)
     }
 
+    suspend fun updateApprovedProduct(id: UUID, product: ApprovedProduct): Boolean = transaction {
+        ProductsApproved.update({ ProductsApproved.id eq id }) {
+            it[name] = product.name
+            it[description] = product.description
+            it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
+            it[weight] = product.weight
+            it[dimension] = product.dimension
+            it[purity] = product.purity
+            it[maxQuantity] = product.maxQuantity
+            it[category] = product.category
+            it[customFields] = product.customFields
+            it[updatedAt] = java.time.LocalDateTime.now()
+        } > 0
+    }
+
     // Create with a specified UUID (used to ensure both tables share same id)
     suspend fun insertApprovedWithId(id: UUID, product: ApprovedProduct): ApprovedProduct = transaction {
         ProductsApproved.insert {
@@ -48,6 +69,8 @@ class ProductRepository {
             it[name] = product.name
             it[description] = product.description
             it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
             it[weight] = product.weight
             it[dimension] = product.dimension
             it[purity] = product.purity
@@ -66,6 +89,8 @@ class ProductRepository {
             it[name] = product.name
             it[description] = product.description
             it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
             it[weight] = product.weight
             it[dimension] = product.dimension
             it[purity] = product.purity
@@ -93,6 +118,8 @@ class ProductRepository {
                 it[name] = product.name
                 it[description] = product.description
                 it[price] = product.price
+                it[margin] = product.margin
+                it[multiplier] = product.multiplier
                 it[weight] = product.weight
                 it[dimension] = product.dimension
                 it[purity] = product.purity
@@ -114,6 +141,8 @@ class ProductRepository {
                 ProductsApproved.id,
                 ProductsApproved.name,
                 ProductsApproved.price,
+                ProductsApproved.margin,
+                ProductsApproved.multiplier,
                 ProductsApproved.category,
             )
             .selectAll()
@@ -135,6 +164,8 @@ class ProductRepository {
                 ProductsUnapproved.id,
                 ProductsUnapproved.name,
                 ProductsUnapproved.price,
+                ProductsUnapproved.margin,
+                ProductsUnapproved.multiplier,
                 ProductsUnapproved.category,
             )
             .selectAll()
@@ -153,6 +184,22 @@ class ProductRepository {
             .singleOrNull()
     }
 
+    // Bulk update: set price for all products in a category (approved)
+    suspend fun updateAllApprovedPricesByCategory(category: String, newPrice: Double): Int = transaction {
+        ProductsApproved.update({ ProductsApproved.category eq category }) {
+            it[price] = newPrice
+            it[updatedAt] = java.time.LocalDateTime.now()
+        }
+    }
+
+    // Bulk update: set price for all products in a category (unapproved)
+    suspend fun updateAllUnapprovedPricesByCategory(category: String, newPrice: Double): Int = transaction {
+        ProductsUnapproved.update({ ProductsUnapproved.category eq category }) {
+            it[price] = newPrice
+            it[updatedAt] = java.time.LocalDateTime.now()
+        }
+    }
+
     // Upsert helpers
     suspend fun upsertApproved(id: UUID, product: ApprovedProduct): ApprovedProduct = transaction {
         val existing = ProductsApproved.select { ProductsApproved.id eq id }.singleOrNull()
@@ -162,6 +209,8 @@ class ProductRepository {
                 it[name] = product.name
                 it[description] = product.description
                 it[price] = product.price
+                it[margin] = product.margin
+                it[multiplier] = product.multiplier
                 it[weight] = product.weight
                 it[dimension] = product.dimension
                 it[purity] = product.purity
@@ -175,6 +224,8 @@ class ProductRepository {
                 it[name] = product.name
                 it[description] = product.description
                 it[price] = product.price
+                it[margin] = product.margin
+                it[multiplier] = product.multiplier
                 it[weight] = product.weight
                 it[dimension] = product.dimension
                 it[purity] = product.purity
@@ -197,6 +248,8 @@ class ProductRepository {
                 it[name] = product.name
                 it[description] = product.description
                 it[price] = product.price
+                it[margin] = product.margin
+                it[multiplier] = product.multiplier
                 it[weight] = product.weight
                 it[dimension] = product.dimension
                 it[purity] = product.purity
@@ -210,6 +263,8 @@ class ProductRepository {
                 it[name] = product.name
                 it[description] = product.description
                 it[price] = product.price
+                it[margin] = product.margin
+                it[multiplier] = product.multiplier
                 it[weight] = product.weight
                 it[dimension] = product.dimension
                 it[purity] = product.purity
@@ -247,6 +302,8 @@ class ProductRepository {
                         name = unapproved.name,
                         description = unapproved.description,
                         price = unapproved.price,
+                        margin = unapproved.margin,
+                        multiplier = unapproved.multiplier,
                         weight = unapproved.weight,
                         dimension = unapproved.dimension,
                         purity = unapproved.purity,
@@ -266,6 +323,8 @@ class ProductRepository {
                         name = approved.name,
                         description = approved.description,
                         price = approved.price,
+                        margin = approved.margin,
+                        multiplier = approved.multiplier,
                         weight = approved.weight,
                         dimension = approved.dimension,
                         purity = approved.purity,
@@ -284,6 +343,8 @@ class ProductRepository {
                         it[name] = ap.name
                         it[description] = ap.description
                         it[price] = ap.price
+                        it[margin] = ap.margin
+                        it[multiplier] = ap.multiplier
                         it[weight] = ap.weight
                         it[dimension] = ap.dimension
                         it[purity] = ap.purity
@@ -301,6 +362,8 @@ class ProductRepository {
                         it[name] = up.name
                         it[description] = up.description
                         it[price] = up.price
+                        it[margin] = up.margin
+                        it[multiplier] = up.multiplier
                         it[weight] = up.weight
                         it[dimension] = up.dimension
                         it[purity] = up.purity
@@ -320,6 +383,8 @@ class ProductRepository {
                             it[name] = ap.name
                             it[description] = ap.description
                             it[price] = ap.price
+                            it[margin] = ap.margin
+                            it[multiplier] = ap.multiplier
                             it[weight] = ap.weight
                             it[dimension] = ap.dimension
                             it[purity] = ap.purity
@@ -334,6 +399,8 @@ class ProductRepository {
                             it[name] = ap.name
                             it[description] = ap.description
                             it[price] = ap.price
+                            it[margin] = ap.margin
+                            it[multiplier] = ap.multiplier
                             it[weight] = ap.weight
                             it[dimension] = ap.dimension
                             it[purity] = ap.purity
@@ -352,6 +419,8 @@ class ProductRepository {
                             it[name] = up.name
                             it[description] = up.description
                             it[price] = up.price
+                            it[margin] = up.margin
+                            it[multiplier] = up.multiplier
                             it[weight] = up.weight
                             it[dimension] = up.dimension
                             it[purity] = up.purity
@@ -366,6 +435,8 @@ class ProductRepository {
                             it[name] = up.name
                             it[description] = up.description
                             it[price] = up.price
+                            it[margin] = up.margin
+                            it[multiplier] = up.multiplier
                             it[weight] = up.weight
                             it[dimension] = up.dimension
                             it[purity] = up.purity
@@ -381,27 +452,13 @@ class ProductRepository {
         return productId
     }
     
-    // Update
-    suspend fun updateApprovedProduct(id: UUID, product: ApprovedProduct): Boolean = transaction {
-        ProductsApproved.update({ ProductsApproved.id eq id }) {
-            it[name] = product.name
-            it[description] = product.description
-            it[price] = product.price
-            it[weight] = product.weight
-            it[dimension] = product.dimension
-            it[purity] = product.purity
-            it[maxQuantity] = product.maxQuantity
-            it[category] = product.category
-            it[customFields] = product.customFields
-            it[updatedAt] = java.time.LocalDateTime.now()
-        } > 0
-    }
-    
     suspend fun updateUnapprovedProduct(id: UUID, product: UnapprovedProduct): Boolean = transaction {
         ProductsUnapproved.update({ ProductsUnapproved.id eq id }) {
             it[name] = product.name
             it[description] = product.description
             it[price] = product.price
+            it[margin] = product.margin
+            it[multiplier] = product.multiplier
             it[weight] = product.weight
             it[dimension] = product.dimension
             it[purity] = product.purity
@@ -435,6 +492,8 @@ class ProductRepository {
                 it[name] = unapproved.name
                 it[description] = unapproved.description
                 it[price] = unapproved.price
+                it[margin] = unapproved.margin
+                it[multiplier] = unapproved.multiplier
                 it[weight] = unapproved.weight
                 it[dimension] = unapproved.dimension
                 it[purity] = unapproved.purity
