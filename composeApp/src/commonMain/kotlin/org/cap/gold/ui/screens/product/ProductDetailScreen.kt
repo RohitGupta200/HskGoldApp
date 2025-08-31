@@ -206,19 +206,21 @@ private fun EditableDropdownRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(valueText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-            }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { opt ->
-                DropdownMenuItem(
-                    text = { Text(opt) },
-                    onClick = {
-                        expanded = false
-                        onSelected(opt)
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    options.forEach { opt ->
+                        DropdownMenuItem(
+                            text = { Text(opt) },
+                            onClick = {
+                                expanded = false
+                                onSelected(opt)
+                            }
+                        )
                     }
-                )
+                }
             }
+
         }
+
         DottedDivider()
     }
 }
@@ -317,6 +319,7 @@ fun ProductDetailScreen(
     }
 
     val product = viewModel.product
+    val unApprovedproduct = viewModel.unapprovedProduct
     val isLoading = viewModel.isLoading
     val error = viewModel.error
     val orderSuccess = viewModel.orderSuccess
@@ -466,8 +469,8 @@ private fun ProductContent(
     val statusDialog = LocalStatusDialogState.current
     // Admin can edit inline without toggling edit mode
     var activeType by remember { mutableStateOf(VariantType.APPROVED) }
-    var approvedDraft by remember { mutableStateOf(product) }
-    var unapprovedDraft by remember { mutableStateOf(product) }
+    var approvedDraft by remember { mutableStateOf( product) }
+    var unapprovedDraft by remember { mutableStateOf(if(viewModel.unapprovedProduct != null) viewModel.unapprovedProduct!! else product) }
     // Use viewModel.fields (SnapshotStateList) directly so mutations recompose
     val quantity = viewModel.quantity
 
@@ -573,7 +576,7 @@ private fun ProductContent(
 
             // Sync price option: when enabled, unapproved.price will be set to approved.price on save
             EditableRowWithCheckBox(
-                label = "Price",
+                label = "Base Price",
                 leftText = draft.price.takeIf { !it.isNaN() }?.toString() ?: "",
                 checked = viewModel.syncPrices,
                 rightText = "Apply To All",
@@ -586,6 +589,16 @@ private fun ProductContent(
                 placeholder = "Add price",
                 keyboardType = KeyboardType.Number,
             )
+
+//            EditableDetailRow(
+//                label = "Discount",
+//                value = draft.purity,
+//                placeholder = "Add Discount",
+//                onChange = {
+//                    if (activeType == VariantType.APPROVED) approvedDraft =
+//                        draft.copy(purity = it) else unapprovedDraft = draft.copy(purity = it)
+//                }
+//            )
 
             Spacer(modifier = Modifier.height(8.dp))
 

@@ -41,6 +41,7 @@ class ProductDetailViewModel(
     var isLoading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
     var product by mutableStateOf<Product?>(null)
+    var unapprovedProduct by mutableStateOf<Product?>(null)
     var orderSuccess by mutableStateOf(false)
     var showOrderDialog by mutableStateOf(false)
     var quantity by mutableStateOf(1)
@@ -124,6 +125,20 @@ class ProductDetailViewModel(
                         )
                         else -> null
                     }
+                    unapprovedProduct = if(both?.unapproved != null) Product(
+                    id = productId,
+                    name = both.unapproved.name,
+                    price = both.unapproved.price,
+                    imageUrl = "",
+                    imageBase64 = both.unapproved.imageBase64,
+                    category = both.unapproved.category,
+                    description = both.unapproved.description,
+                    weight = both.unapproved.weight,
+                    purity = both.unapproved.purity,
+                    dimension = both.unapproved.dimension,
+                    maxQuantity = both.unapproved.maxQuantity
+                    )
+                    else null
                     // Populate fields from customFields JSON
                     val fieldsJson = both?.approved?.customFields ?: both?.unapproved?.customFields
                     setFieldsFromJson(fieldsJson)

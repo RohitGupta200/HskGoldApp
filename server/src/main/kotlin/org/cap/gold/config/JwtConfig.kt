@@ -17,7 +17,7 @@ class JwtConfig(config: ApplicationConfig) {
         config.propertyOrNull("ktor.security.jwt.secret")?.getString() ?: 
         throw IllegalStateException("JWT Secret not configured")
     
-    // Access token expiration (default: 15 minutes)
+    // Access token expiration (default: 150 minutes)
     private val accessTokenExpiration = parseDurationMillis(
         config.propertyOrNull("ktor.security.jwt.accessTokenExpiration")?.getString(),
         150 * 60 * 1000L
@@ -26,7 +26,7 @@ class JwtConfig(config: ApplicationConfig) {
     // Refresh token expiration (default: 7 days)
     private val refreshTokenExpiration = parseDurationMillis(
         config.propertyOrNull("ktor.security.jwt.refreshTokenExpiration")?.getString(),
-        7 * 24 * 60 * 60 * 1000L
+        60 * 24 * 60 * 60 * 1000L
     )
     
     // Algorithm for signing tokens
