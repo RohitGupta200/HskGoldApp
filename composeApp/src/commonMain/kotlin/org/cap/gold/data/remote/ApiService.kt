@@ -102,7 +102,8 @@ interface ProductApiService {
         quantity: Int,
         address: String,
         phoneNumber: String,
-        name: String
+        name: String,
+        isApprovedUser: Boolean
     ): Order
 }
 
@@ -407,11 +408,16 @@ class ProductApiServiceImpl(
         quantity: Int,
         address: String,
         phoneNumber: String,
-        name: String
+        name: String,
+        isApprovedUser: Boolean
     ): Order {
         // Fetch product to assemble order payload (server expects product details)
-        val product = runCatching { getProductById(productId) }
-            .getOrElse { getUnapprovedProductById(productId) }
+        val product = if(isApprovedUser) runCatching { getProductById(productId) }.getOrElse { null }
+            else runCatching { getUnapprovedProductById(productId) }.getOrElse { null }
+        if(product == null){
+            throw NullPointerException("Please Try Again")
+            return Order()
+        }
 
         @Serializable
         data class CreateOrderPayload(
@@ -429,13 +435,13 @@ class ProductApiServiceImpl(
         val payload = CreateOrderPayload(
             productId = productId,
             productName = product.name,
-            productPrice = product.price,
+            productPrice = product.margin+((product.price)*product.multiplier),
             productWeight = product.weight.toDoubleOrNull() ?: 0.0,
             productDimensions = product.dimension,
             productQuantity = quantity,
             userMobile = phoneNumber,
             userName = name,
-            totalAmount = product.price * quantity
+            totalAmount = (product.margin+((product.price)*product.multiplier)) * quantity
         )
 
         return client.post("api/orders") {

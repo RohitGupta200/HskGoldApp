@@ -11,7 +11,9 @@ import java.util.*
 enum class OrderStatus {
     PENDING,
     CONFIRMED,
-    CANCELLED
+    CANCELLED,
+    COMPLETED,
+    PARTIAL_COMPLETED
 }
 
 // Order status group

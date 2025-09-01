@@ -16,7 +16,7 @@ data class Product(
     val weight: String = "",
     val purity: String = "",
     val dimension: String = "",
-    val maxQuantity: Int = 1
+    val maxQuantity: Int = 0
 )
 
 @Serializable

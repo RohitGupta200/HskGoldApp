@@ -296,10 +296,12 @@ fun AdminOrderItem(
                 // Amount color by status
                 val amountColor = when (order.status) {
                     OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
-                    OrderStatus.PENDING -> Color(0xFFFF6D00)
+                    OrderStatus.PENDING -> Color(0xFFE19E04)
                     OrderStatus.CANCELLED -> Color(0xFFF44336)
                     OrderStatus.SHIPPED -> Color(0xFF1E88E5)
                     OrderStatus.DELIVERED -> Color(0xFF2E7D32)
+                    OrderStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+                    OrderStatus.PARTIAL_COMPLETED -> Color(0xFFFF6D00)
                 }
                 Text(
                     text = "₹ ${formatAmount(order.totalAmount)}",

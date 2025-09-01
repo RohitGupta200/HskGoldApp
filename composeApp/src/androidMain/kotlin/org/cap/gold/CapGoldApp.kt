@@ -19,8 +19,8 @@ class CapGoldApp : Application() {
         
         // Initialize Koin with the base URL of your API (shared initKoin)
         initKoin(
-            baseUrl = "https://capgold-server.onrender.com",
-//            baseUrl = "http://10.0.2.2:8081",
+//            baseUrl = "https://capgold-server.onrender.com",
+            baseUrl = "http://10.0.2.2:8081",
             enableNetworkLogs = false,
             appDeclaration = {
                 // Provide Android context for androidAuthModule

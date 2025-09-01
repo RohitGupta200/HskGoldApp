@@ -286,7 +286,8 @@ class ProductDetailViewModel(
                     quantity = quantity,
                     address = "", // Address is no longer collected from the user
                     phoneNumber = userPhone,
-                    name = userName
+                    name = userName,
+                    isApprovedUser = isApprovedUser
                 )
                 
                 orderSuccess = true

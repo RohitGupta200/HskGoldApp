@@ -430,8 +430,8 @@ fun ProductDetailScreen(
                             CoroutineScope(Dispatchers.IO).launch {
                                 statusDialog.show(
                                     success = true,
-                                    message = "Order Placed Successfully",
-                                    subMessage = "Our team will call you shortly"
+                                    message = "Order request sent",
+                                    subMessage = "We will confirm your order soon"
                                 )
                                 delay(1000)
                                 statusDialog.hide()
@@ -474,6 +474,7 @@ private fun ProductContent(
     // Use viewModel.fields (SnapshotStateList) directly so mutations recompose
     val quantity = viewModel.quantity
 
+    var hasOppendedUnapproved by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -525,6 +526,7 @@ private fun ProductContent(
         
         // Product Details
         if (isAdmin) {
+
             // Name and Description just below the image (borderless)
             val draft = if (activeType == VariantType.APPROVED) approvedDraft else unapprovedDraft
             Spacer(modifier = Modifier.height(12.dp))
@@ -565,7 +567,12 @@ private fun ProductContent(
                 options = listOf("Approved", "Unapproved"),
                 onSelected = { sel ->
                     activeType =
-                        if (sel == "Approved") VariantType.APPROVED else VariantType.UNAPPROVED
+                        if (sel == "Approved") VariantType.APPROVED else{
+                            if(!hasOppendedUnapproved && viewModel.isCreateMode){
+                                unapprovedDraft = approvedDraft.copy()
+                            }
+                            hasOppendedUnapproved = true
+                            VariantType.UNAPPROVED}
                 }
             )
 
@@ -755,6 +762,10 @@ private fun ProductContent(
             val canSave = currentDraft.name.isNotBlank() && currentDraft.category.isNotBlank() && !currentDraft.price.isNaN()
             Button(
                 onClick = {
+                    if(!hasOppendedUnapproved && viewModel.isCreateMode){
+                        hasOppendedUnapproved = true
+                        unapprovedDraft = approvedDraft.copy()
+                    }
                     val approvedToSend = approvedDraft
                     val unapprovedToSend = unapprovedDraft
                     viewModel.upsertBothFromUi(
@@ -818,7 +829,7 @@ private fun ProductContent(
             Spacer(modifier = Modifier.height(8.dp))
             DottedDivider()
             Spacer(modifier = Modifier.height(8.dp))
-            val calculatedPrice= (product.price+product.margin)*product.multiplier
+            val calculatedPrice= product.margin+(product.price)*product.multiplier
             ProductDetailRow("Price", "₹${calculatedPrice}")
             DottedDivider()
             ProductDetailRow("Purity", product.purity)

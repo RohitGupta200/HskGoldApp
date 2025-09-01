@@ -80,7 +80,7 @@ fun ProductItem(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            val calculatedPrice= (product.price+product.margin)*product.multiplier
+            val calculatedPrice= product.margin+(product.price)*product.multiplier
             
             // Product Price
             Text(

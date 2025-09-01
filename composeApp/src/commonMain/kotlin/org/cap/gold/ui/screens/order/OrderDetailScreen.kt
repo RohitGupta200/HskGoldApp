@@ -1,5 +1,6 @@
 package org.cap.gold.ui.screens.order
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,7 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -163,11 +166,13 @@ private fun OrderDetailContent(
             "Order status", 
             order.status.name, 
             valueColor = when (order.status) {
-                OrderStatus.PENDING -> Color(0xFFFFA000)
                 OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
+                OrderStatus.PENDING -> Color(0xE19E04)
                 OrderStatus.CANCELLED -> Color(0xFFF44336)
                 OrderStatus.SHIPPED -> Color(0xFF1E88E5)
-                OrderStatus.DELIVERED -> Color(0xFF5E35B1)
+                OrderStatus.DELIVERED -> Color(0xFF2E7D32)
+                OrderStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+                OrderStatus.PARTIAL_COMPLETED -> Color(0xFFFF6D00)
             },
             showStatusButtons = showStatusButtons,
             onStatusChange = onStatusChange,
@@ -187,6 +192,24 @@ private fun OrderDetailContent(
         OrderDetailRow("Amount", "₹${order.totalPrice}")
     }
 }
+@Composable
+private fun DottedDivider() {
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    Canvas(
+        modifier = Modifier
+            .width(1.dp)
+            .height(15.dp)
+    ) {
+        val y = size.width / 2f
+        drawLine(
+            color = dividerColor,
+            start = Offset(y, 0f),
+            end = Offset(y,size.height),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+            strokeWidth = 2f
+        )
+    }
+}
 
 @Composable
 private fun OrderDetailRow(
@@ -201,7 +224,7 @@ private fun OrderDetailRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -212,27 +235,48 @@ private fun OrderDetailRow(
             )
             
             if (showStatusButtons && label == "Order status") {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Button(
+                Row(modifier = Modifier.wrapContentWidth(),
+                    horizontalArrangement = Arrangement.End) {
+                    TextButton(
                         onClick = { onStatusChange?.invoke(OrderStatus.CANCELLED) },
-
-                        modifier = Modifier.height(32.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                     ) {
                         Text("Reject", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                     }
+                    VerticalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 1f),
+                        thickness = 1.dp
+                    )
                     
-                    Button(
+                    TextButton(
                         onClick = { onStatusChange?.invoke(OrderStatus.CONFIRMED) },
-                        modifier = Modifier.height(32.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+
                     ) {
                         Text("Accept", fontSize = 12.sp, color = Color(0xFF4CAF50))
+                    }
+                    VerticalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 1f),
+                        thickness = 1.dp
+                    )
+
+                    TextButton(
+                        onClick = { onStatusChange?.invoke(OrderStatus.COMPLETED) },
+                    ) {
+                        Text("Complete", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                    VerticalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 1f),
+                        thickness = 1.dp
+                    )
+
+                    TextButton(
+                        onClick = { onStatusChange?.invoke(OrderStatus.PARTIAL_COMPLETED) },
+                    ) {
+                        Text("Partial Complete", fontSize = 12.sp, color = Color(0xFFFF6D00))
                     }
                 }
             } else {
                 if (label == "Order status" && onRequestChangeStatus != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = value,
                             style = MaterialTheme.typography.bodyMedium,

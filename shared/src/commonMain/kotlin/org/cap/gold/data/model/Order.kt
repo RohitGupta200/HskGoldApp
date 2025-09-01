@@ -27,7 +27,9 @@ enum class OrderStatus {
     CONFIRMED,
     SHIPPED,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+    COMPLETED,
+    PARTIAL_COMPLETED
 }
 
 // Request/Response DTOs

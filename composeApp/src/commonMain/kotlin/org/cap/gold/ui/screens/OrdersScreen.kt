@@ -109,10 +109,10 @@ fun OrdersScreenContent(
                 is OrdersUiState.Success -> {
                     val orders = if (selectedTabIndex == 0) {
                         // Active: Pending, Confirmed, Shipped
-                        uiState.orders.filter { it.status == OrderStatus.PENDING || it.status == OrderStatus.CONFIRMED || it.status == OrderStatus.SHIPPED }
+                        uiState.orders.filter { it.status == OrderStatus.PENDING || it.status == OrderStatus.CONFIRMED || it.status == OrderStatus.SHIPPED || it.status == OrderStatus.PARTIAL_COMPLETED }
                     } else {
-                        // Past: Delivered, Cancelled
-                        uiState.orders.filter { it.status == OrderStatus.DELIVERED || it.status == OrderStatus.CANCELLED }
+                        // Past: Delivered, Cancelled,Completed
+                        uiState.orders.filter { it.status == OrderStatus.DELIVERED || it.status == OrderStatus.CANCELLED || it.status == OrderStatus.COMPLETED }
                     }
                     
                     if (orders.isEmpty()) {
@@ -188,7 +188,7 @@ fun OrderItem(
             )
         }
 
-        Column(modifier = Modifier.weight(.4f), horizontalAlignment = Alignment.End) {
+        Column(modifier = Modifier.weight(.6f), horizontalAlignment = Alignment.End) {
             // Right: total amount
             Text(
                 text = "₹ ${formatAmount(order.totalAmount)}",
@@ -198,17 +198,21 @@ fun OrderItem(
             Spacer(Modifier.height(2.dp))
             val amountColor = when (order.status) {
                 OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
-                OrderStatus.PENDING -> Color(0xFFFF6D00)
+                OrderStatus.PENDING -> Color(0xE19E04)
                 OrderStatus.CANCELLED -> Color(0xFFF44336)
                 OrderStatus.SHIPPED -> Color(0xFF1E88E5)
                 OrderStatus.DELIVERED -> Color(0xFF2E7D32)
+                OrderStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+                OrderStatus.PARTIAL_COMPLETED -> Color(0xFFFF6D00)
             }
             val text = when (order.status) {
-                OrderStatus.CONFIRMED -> "Confirmed"
+                OrderStatus.CONFIRMED -> "Accepted"
                 OrderStatus.PENDING -> "Pending"
-                OrderStatus.CANCELLED -> "Cancelled"
+                OrderStatus.CANCELLED -> "Rejected"
                 OrderStatus.SHIPPED -> "Shipped"
                 OrderStatus.DELIVERED -> "Delivered"
+                OrderStatus.COMPLETED -> "Completed"
+                OrderStatus.PARTIAL_COMPLETED -> "Partially Completed"
             }
             Text(
                 text = text,
