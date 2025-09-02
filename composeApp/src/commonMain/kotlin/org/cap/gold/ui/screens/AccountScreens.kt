@@ -2,6 +2,8 @@ package org.cap.gold.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,6 +35,7 @@ import org.cap.gold.profile.ProfileService
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 import org.cap.gold.ui.components.LocalStatusDialogState
+import org.cap.gold.data.remote.ProductApiService
 
 @Composable
 fun AccountScreen(
@@ -40,10 +43,15 @@ fun AccountScreen(
     onLogout: () -> Unit
 ) {
     val navigator = LocalNavigator.current
+    val statusDialog = LocalStatusDialogState.current
+    val scope = rememberCoroutineScope()
+    val isAdmin = remember(user.role) { user.role != 0 }
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 12.dp)
+            .verticalScroll(scrollState)
     ) {
         // Title Row (tab layout has no back, so only centered title)
         Text("Account", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -77,14 +85,72 @@ fun AccountScreen(
 
         Spacer(Modifier.height(20.dp))
 
+        // About Us Section
+        val api: ProductApiService = koinInject()
+        var aboutUs by remember { mutableStateOf("") }
+        LaunchedEffect(Unit) {
+            try { aboutUs = api.getAboutUs() } catch (_: Throwable) { aboutUs = "" }
+        }
+        Text("About Us", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(8.dp))
+        if (user.role==0) {
+            OutlinedTextField(
+                value = aboutUs,
+                onValueChange = { aboutUs = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Add text here") },
+                minLines = 1,
+                maxLines = 10
+            )
+        } else {
+            val isBlank = aboutUs.isBlank()
+            Text(
+                text = if (isBlank) " " else aboutUs,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isBlank) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f) else MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        // Image placeholder (no image source specified)
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(160.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("About image", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            }
+        }
+        
+        if (user.role==0) {
+            Spacer(Modifier.height(12.dp))
+            var saving by remember { mutableStateOf(false) }
+            PrimaryPillButton(text = if (saving) "Saving..." else "Save About Us") {
+                if (saving) return@PrimaryPillButton
+                saving = true
+                scope.launch {
+                    val ok = try { api.setAboutUs(aboutUs) } catch (_: Throwable) { false }
+                    if (ok) {
+                        // Show success and refresh content (optional)
+                        scope.launch {
+                            statusDialog.show(success = true, message = "About Us updated successfully")
+                            delay(2000)
+                            statusDialog.hide()
+                        }
+                    }
+                    saving = false
+                }
+            }
+        }
+
         // Change Password action (secondary pill)
+        Spacer(Modifier.height(6.dp))
         SecondaryPillButton(text = "Change password") {
             navigator?.push(ChangePasswordVoyagerScreen())
         }
 
-        Spacer(Modifier.weight(1f))
-
         // Logout primary pill at bottom
+        Spacer(Modifier.height(6.dp))
         PrimaryPillButton(text = "Logout", onClick = onLogout)
     }
 }

@@ -105,6 +105,10 @@ interface ProductApiService {
         name: String,
         isApprovedUser: Boolean
     ): Order
+
+    // About Us
+    suspend fun getAboutUs(): String
+    suspend fun setAboutUs(content: String): Boolean
 }
 
 /**
@@ -284,6 +288,24 @@ class ProductApiServiceImpl(
         val response: HttpResponse = client.delete("api/products/unapproved/$id")
         return response.status.isSuccess()
     }
+
+    @Serializable
+    private data class AboutUsPayload(val content: String)
+
+    override suspend fun getAboutUs(): String = try {
+        client.get("api/aboutus").body<AboutUsPayload>().content
+    } catch (_: Exception) {
+        // Fallback: try plain text
+        try { client.get("api/aboutus").bodyAsText() } catch (_: Exception) { "" }
+    }
+
+    override suspend fun setAboutUs(content: String): Boolean = try {
+        val resp: HttpResponse = client.post("api/aboutus") {
+            contentType(ContentType.Application.Json)
+            setBody(AboutUsPayload(content))
+        }
+        resp.status.isSuccess()
+    } catch (_: Exception) { false }
 
     // ===== Admin both-variant endpoints =====
     override suspend fun getBothVariantsById(id: String): BothVariantsResponse =

@@ -31,6 +31,7 @@ import org.cap.gold.config.DatabaseFactory
 import org.cap.gold.config.FirebaseConfig
 import org.cap.gold.config.JwtConfig
 import org.cap.gold.controllers.AuthController
+import org.cap.gold.controllers.AboutUsController
 import org.cap.gold.controllers.UserController
 import org.cap.gold.controllers.ProductController
 import org.cap.gold.controllers.CategoryController
@@ -48,7 +49,9 @@ import org.cap.gold.models.ProductImages
 import org.cap.gold.models.UnapprovedProduct
 import org.cap.gold.models.Categories
 import org.cap.gold.models.AdminUsers
+import org.cap.gold.models.AboutUsTable
 import org.cap.gold.repositories.OrderRepository
+import org.cap.gold.repositories.AboutUsRepository
 import org.cap.gold.repositories.ProductRepository
 import org.cap.gold.repositories.CategoryRepository
 import org.cap.gold.repositories.UserRepository
@@ -82,12 +85,14 @@ fun appModule(env: ApplicationEnvironment) = module {
     single { ProductRepository() }
     single { CategoryRepository() }
     single { OrderRepository() }
+    single { AboutUsRepository() }
 
     // Services
     single { NotificationService() }
 
     // Controllers
     single { AuthController(get(), get(), get(),get()) }
+    single { AboutUsController(get()) }
     single { ProductController(get(), get()) }
     single { CategoryController(get()) }
     single { UserController(get()) }
@@ -246,6 +251,10 @@ private fun Application.configureRouting(authController: AuthController) {
                 }
             }
 
+            // Public About Us routes
+            val aboutUsControllerPublic: AboutUsController by inject()
+            aboutUsControllerPublic.apply { this@route.aboutUsRoutes() }
+
             // Protected routes
             authenticate("auth-jwt") {
                 // Product routes
@@ -330,7 +339,8 @@ fun Application.module() {
             Orders,
             Categories,
             ProductImages,
-            AdminUsers
+            AdminUsers,
+            AboutUsTable
         )
 
         // 3) Migrate product weight column type from numeric to varchar(50) if needed (both tables)
