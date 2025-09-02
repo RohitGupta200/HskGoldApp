@@ -36,6 +36,7 @@ import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 import org.cap.gold.ui.components.LocalStatusDialogState
 import org.cap.gold.data.remote.ProductApiService
+import org.cap.gold.ui.components.AboutUsImage
 
 @Composable
 fun AccountScreen(
@@ -111,16 +112,12 @@ fun AccountScreen(
             )
         }
         Spacer(Modifier.height(12.dp))
-        // Image placeholder (no image source specified)
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(160.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("About image", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-            }
-        }
+        // About image (platform-specific)
+        AboutUsImage(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+        )
         
         if (user.role==0) {
             Spacer(Modifier.height(12.dp))
