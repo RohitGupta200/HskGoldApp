@@ -4,7 +4,7 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 import platform.Foundation.NSRecursiveLock
 
-internal actual class SynchronizedProperty<T> actual constructor(
+internal class SynchronizedProperty<T> constructor(
     initialValue: T
 ) : ReadWriteProperty<Any?, T> {
     private var value = initialValue

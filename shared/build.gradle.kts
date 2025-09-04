@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,18 +14,28 @@ kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+
+    // Produce iOS frameworks for Xcode to consume
+    targets.withType<KotlinNativeTarget> {
+        if (konanTarget.family.isAppleFamily) {
+            binaries.framework {
+                baseName = "shared"
+                isStatic = true
+            }
+        }
+    }
     
     jvm()
     
     // Configure JVM toolchain
-    jvmToolchain(11)
+    jvmToolchain(17)
     
     sourceSets {
         val commonMain by getting {
@@ -121,7 +132,7 @@ android {
         viewBinding = true
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     }

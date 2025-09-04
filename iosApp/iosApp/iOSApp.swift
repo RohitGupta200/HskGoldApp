@@ -1,12 +1,12 @@
 import SwiftUI
 import Foundation
-import shared
+import ComposeApp
 
 @main
 struct iOSApp: App {
     init() {
-        // Initialize platform-specific code
-        setupPlatform()
+        // Initialize platform-specific code from Kotlin
+        PlatformKt.setupPlatform()
 
         // Configure shared URLCache for Ktor Darwin engine (NSURLSession)
         // 20 MB memory, 100 MB disk
@@ -17,17 +17,13 @@ struct iOSApp: App {
         )
         
         // Initialize Koin with the iOS app context and server URL
-        let koinApplication = KoinKt.doInitKoin(
-            baseUrl: "http://localhost:8080", // For iOS simulator, localhost points to the host machine
-            appDeclaration: { _ in }
+        print("[CapGold] About to init Koin via ComposeApp (iOS)")
+        BootstrapKt.doInitIos(
+            baseUrl: "https://capgold-server.onrender.com",
+            enableNetworkLogs: false
         )
-        
-        // Store the Koin application reference
-        _koin = koinApplication
+        print("[CapGold] Koin init completed (iOS)")
     }
-    
-    // Store the Koin application reference
-    @State private var koin: KoinApplication?
     
     var body: some Scene {
         WindowGroup {
@@ -36,5 +32,4 @@ struct iOSApp: App {
     }
 }
 
-// Global reference to keep Koin alive
-private var _koin: KoinApplication?
+// Koin is initialized in init(); no explicit reference needed on iOS
