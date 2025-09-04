@@ -1,23 +1,19 @@
 package org.cap.gold.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.interop.UIKitView
-import kotlinx.cinterop.ExperimentalForeignApi
-import platform.UIKit.UIImage
-import platform.UIKit.UIImageView
+import androidx.compose.ui.layout.ContentScale
+import org.jetbrains.compose.resources.painterResource
+import capgold.composeapp.generated.resources.Res
+import capgold.composeapp.generated.resources.hsk_parents
 
 @Composable
-@OptIn(ExperimentalForeignApi::class)
 actual fun AboutUsImage(modifier: Modifier) {
-    // Load image named "hsk_parents" from iOS Assets.xcassets (main bundle)
-    UIKitView(
-        factory = {
-            val imageView = UIImageView()
-            imageView.clipsToBounds = true
-            imageView.image = UIImage.imageNamed("hsk_parents")
-            imageView
-        },
-        modifier = modifier
+    Image(
+        painter = painterResource(Res.drawable.hsk_parents),
+        contentDescription = "About Us image",
+        modifier = modifier,
+        contentScale = ContentScale.Crop
     )
 }

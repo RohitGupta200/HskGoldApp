@@ -1,24 +1,17 @@
 package org.cap.gold.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.interop.UIKitView
-import kotlinx.cinterop.ExperimentalForeignApi
-import platform.UIKit.UIImage
-import platform.UIKit.UIImageView
+import org.jetbrains.compose.resources.painterResource
+import capgold.composeapp.generated.resources.Res
+import capgold.composeapp.generated.resources.branding
 
 @Composable
-@OptIn(ExperimentalForeignApi::class)
 actual fun BrandingImage(modifier: Modifier) {
-    // Load image named "branding" from iOS Assets.xcassets (main bundle)
-    UIKitView(
-        factory = {
-            val imageView = UIImageView()
-            imageView.image = UIImage.imageNamed("branding")
-            imageView
-        },
+    Image(
+        painter = painterResource(Res.drawable.branding),
+        contentDescription = "Branding Logo",
         modifier = modifier
     )
 }
