@@ -24,10 +24,10 @@ class OrdersViewModel : KoinComponent {
     private fun formatDate(millis: Long): String {
         return try {
             val dt = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
-            val month = dt.month.name.lowercase().replaceFirstChar { it.titlecase() }.take(3)
-            val day = dt.dayOfMonth
+            val day = dt.dayOfMonth.toString().padStart(2, '0')
+            val month = dt.monthNumber.toString().padStart(2, '0')
             val year = dt.year
-            "$month ${day.toString().padStart(2, '0')}, $year"
+            "$day-$month-$year"
         } catch (e: Exception) { "" }
     }
     
@@ -43,6 +43,7 @@ class OrdersViewModel : KoinComponent {
                                 id = order.id,
                                 orderNumber = order.id, // fallback
                                 productName = order.productName.ifBlank { order.productId },
+                                productId = order.productId,
                                 quantity = order.quantity,
                                 totalAmount = order.totalPrice,
                                 status = order.status,

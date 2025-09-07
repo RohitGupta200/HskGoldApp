@@ -65,6 +65,7 @@ class AdminOrdersViewModel : KoinComponent {
                                 id = order.id,
                                 orderNumber = order.id,
                                 productName = order.productName.ifBlank { order.productId },
+                                productId = order.productId,
                                 quantity = order.quantity,
                                 totalAmount = order.totalPrice,
                                 status = order.status,

@@ -9,6 +9,7 @@ data class OrderUiModel(
     val id: String,
     val orderNumber: String,
     val productName: String,
+    val productId: String,
     val quantity: Int,
     val totalAmount: Double,
     val status: OrderStatus,
