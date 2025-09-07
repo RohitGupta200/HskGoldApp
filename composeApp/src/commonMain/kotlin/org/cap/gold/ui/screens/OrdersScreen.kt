@@ -240,7 +240,7 @@ fun OrderItem(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = if (order.quantity == 1) "1 item" else "${order.quantity} items" + "• ${order.formattedDate}",
+                text = if (order.quantity == 1) "1 item" else {"${order.quantity} items"} + " • ${order.formattedDate}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
