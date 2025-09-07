@@ -529,6 +529,7 @@ private fun ProductContent(
 
             // Name and Description just below the image (borderless)
             val draft = if (activeType == VariantType.APPROVED) approvedDraft else unapprovedDraft
+            val fields = if (activeType == VariantType.APPROVED) viewModel.fields else viewModel.fieldsUnapproved
             Spacer(modifier = Modifier.height(12.dp))
             EditableHeadline(
                 value = draft.name,
@@ -711,18 +712,18 @@ private fun ProductContent(
                 }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            for(i in viewModel.fields.indices){
+            for(i in fields.indices){
                 ProductCustomRow(
-                    viewModel.fields[i].label,
-                    viewModel.fields[i].value,
+                    fields[i].label,
+                    fields[i].value,
                     isAdmin,
-                    onRemoveField = { viewModel.removeField(i) }
+                    onRemoveField = { fields.removeAt(i) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 DottedDivider()
             }
 
-            if(!(viewModel.fields.size>=5))
+            if(!(fields.size>=5))
                 Button(
                     onClick = { addField.show { label, value ->
                         viewModel.addField(label, value)

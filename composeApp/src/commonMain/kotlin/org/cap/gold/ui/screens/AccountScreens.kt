@@ -92,7 +92,7 @@ fun AccountScreen(
         LaunchedEffect(Unit) {
             try { aboutUs = api.getAboutUs() } catch (_: Throwable) { aboutUs = "" }
         }
-        Text("About Us", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text("About H.S Kothari Jewellers", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         if (user.role==0) {
             OutlinedTextField(

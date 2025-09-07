@@ -198,7 +198,7 @@ fun OrderItem(
             Spacer(Modifier.height(2.dp))
             val amountColor = when (order.status) {
                 OrderStatus.CONFIRMED -> Color(0xFF4CAF50)
-                OrderStatus.PENDING -> Color(0xE19E04)
+                OrderStatus.PENDING -> Color(0xFFE19E04)
                 OrderStatus.CANCELLED -> Color(0xFFF44336)
                 OrderStatus.SHIPPED -> Color(0xFF1E88E5)
                 OrderStatus.DELIVERED -> Color(0xFF2E7D32)
