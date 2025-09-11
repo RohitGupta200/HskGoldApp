@@ -129,8 +129,8 @@ android {
         applicationId = "org.hsk.gold"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "1.0.0.0.3"
+        versionCode = 9
+        versionName = "1.0.0.0.6"
     }
     packaging {
         resources {

@@ -726,7 +726,12 @@ private fun ProductContent(
             if(!(fields.size>=5))
                 Button(
                     onClick = { addField.show { label, value ->
-                        viewModel.addField(label, value)
+
+                        if(activeType == VariantType.APPROVED){
+                            viewModel.addField(label, value)
+                        }else{
+                            viewModel.addUnApprovedField(label, value)
+                        }
                     } },
                     modifier = Modifier
                         .fillMaxWidth()

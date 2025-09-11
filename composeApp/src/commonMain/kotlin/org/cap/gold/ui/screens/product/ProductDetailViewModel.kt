@@ -307,6 +307,10 @@ class ProductDetailViewModel(
         fields.add(Field(label, value))
     }
 
+    fun addUnApprovedField(label: String, value: String) {
+        fieldsUnapproved.add(Field(label, value))
+    }
+
     fun removeField(i:Int) {
         fields.removeAt(i)
     }
