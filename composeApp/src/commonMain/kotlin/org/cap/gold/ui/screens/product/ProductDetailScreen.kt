@@ -27,10 +27,6 @@ import androidx.compose.foundation.text.KeyboardOptions
  import androidx.compose.ui.text.input.TextFieldValue
  import androidx.compose.ui.text.TextRange
  import androidx.compose.ui.focus.onFocusChanged
- import androidx.compose.ui.focus.FocusRequester
- import androidx.compose.ui.focus.focusRequester
- import androidx.compose.foundation.gestures.detectTapGestures
- import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -105,13 +101,33 @@ private fun EditableRowWithCheckBox(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                var tfv by remember { mutableStateOf(TextFieldValue(text = leftText)) }
+                var isFocused by remember { mutableStateOf(false) }
+
+                LaunchedEffect(leftText) {
+                    if (leftText != tfv.text) {
+                        tfv = tfv.copy(text = leftText, selection = TextRange(leftText.length))
+                    }
+                }
+
+                LaunchedEffect(isFocused) {
+                    if (isFocused) {
+                        // Defer to next frame to ensure focus is applied before selection
+                        tfv = tfv.copy(selection = TextRange(0, tfv.text.length))
+                    }
+                }
+
                 BasicTextField(
-                    value = leftText,
-                    onValueChange = onChange,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy( color = MaterialTheme.colorScheme.onSurface),
-                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                    value = tfv,
+                    onValueChange = { newValue ->
+                        tfv = newValue
+                        onChange(newValue.text)
+                    },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                    modifier = Modifier.onFocusChanged { isFocused = it.isFocused }
                 ) { inner ->
-                    if (leftText.isEmpty()) {
+                    if (tfv.text.isEmpty()) {
                         Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     inner()
@@ -173,8 +189,8 @@ private fun EditableDetailRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val focusRequester = remember { FocusRequester() }
             var textFieldValue by remember { mutableStateOf(TextFieldValue(text = value)) }
+            var isFocused by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .widthIn(min = 120.dp)
@@ -182,6 +198,12 @@ private fun EditableDetailRow(
                 LaunchedEffect(value) {
                     if (value != textFieldValue.text) {
                         textFieldValue = textFieldValue.copy(text = value, selection = TextRange(value.length))
+                    }
+                }
+                LaunchedEffect(isFocused) {
+                    if (isFocused) {
+                        // Ensure selection happens after focus is applied
+                        textFieldValue = textFieldValue.copy(selection = TextRange(0, textFieldValue.text.length))
                     }
                 }
 
@@ -194,17 +216,8 @@ private fun EditableDetailRow(
                     textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusRequester(focusRequester)
-                        .pointerInput(textFieldValue.text) {
-                            detectTapGestures(onTap = {
-                                focusRequester.requestFocus()
-                                textFieldValue = textFieldValue.copy(selection = TextRange(0, textFieldValue.text.length))
-                            })
-                        }
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                textFieldValue = textFieldValue.copy(selection = TextRange(0, textFieldValue.text.length))
-                            }
+                            isFocused = focusState.isFocused
                         },
                     keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
                 ) { inner ->
@@ -617,54 +630,79 @@ private fun ProductContent(
 
 
             // Sync price option: when enabled, unapproved.price will be set to approved.price on save
+            var priceText by remember(activeType) { mutableStateOf(draft.price.takeIf { !it.isNaN() }?.toString() ?: "") }
             EditableRowWithCheckBox(
                 label = "Base Price",
-                leftText = draft.price.takeIf { !it.isNaN() }?.toString() ?: "",
+                leftText = priceText,
                 checked = viewModel.syncPrices,
                 rightText = "Apply To All",
                 onCheckedChange = { viewModel.syncPrices = it },
                 onChange = { v ->
-                    val d = v.toDoubleOrNull() ?: 0.0
-                    if (activeType == VariantType.APPROVED) {approvedDraft =
-                        draft.copy(price = d)
-                        if(viewModel.isCreateMode && (unapprovedDraft.price == null || unapprovedDraft.price == 0.0))
-                            unapprovedDraft = draft.copy(price = d)
-                    } else unapprovedDraft = draft.copy(price = d)
+                    priceText = v
+                    // Update model only when input is a clean parsable double (no trailing dot)
+                    val shouldParse = v.isNotBlank() && !v.endsWith('.')
+                    if (shouldParse) {
+                        v.toDoubleOrNull()?.let { d ->
+                            if (activeType == VariantType.APPROVED) {
+                                approvedDraft = draft.copy(price = d)
+                                if (viewModel.isCreateMode && (unapprovedDraft.price == null || unapprovedDraft.price == 0.0))
+                                    unapprovedDraft = draft.copy(price = d)
+                            } else {
+                                unapprovedDraft = draft.copy(price = d)
+                            }
+                        }
+                    }
                 },
                 placeholder = "Add price",
-                keyboardType = KeyboardType.Number,
+                keyboardType = KeyboardType.Decimal,
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            var marginText by remember(activeType) { mutableStateOf(draft.margin.takeIf { !it.isNaN() }?.toString() ?: "") }
             EditableDetailRow(
                 label = "Margin",
-                value = draft.margin.takeIf { !it.isNaN() }?.toString() ?: "",
+                value = marginText,
                 placeholder = "Add Margin",
-                keyboardType = KeyboardType.Number,
-                onChange = {
-                    if(!it.isEmpty())
-                    if (activeType == VariantType.APPROVED){ approvedDraft =
-                        draft.copy(margin = it.toDouble())
-                        if(viewModel.isCreateMode && (unapprovedDraft.margin == null || unapprovedDraft.margin == 0.0))
-                            unapprovedDraft = draft.copy(margin = it.toDouble())
-                    } else unapprovedDraft = draft.copy(margin = it.toDouble())
+                keyboardType = KeyboardType.Decimal,
+                onChange = { v ->
+                    marginText = v
+                    val shouldParse = v.isNotBlank() && !v.endsWith('.')
+                    if (shouldParse) {
+                        v.toDoubleOrNull()?.let { d ->
+                            if (activeType == VariantType.APPROVED) {
+                                approvedDraft = draft.copy(margin = d)
+                                if (viewModel.isCreateMode && (unapprovedDraft.margin == null || unapprovedDraft.margin == 0.0))
+                                    unapprovedDraft = draft.copy(margin = d)
+                            } else {
+                                unapprovedDraft = draft.copy(margin = d)
+                            }
+                        }
+                    }
                 }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            var multiplierText by remember(activeType) { mutableStateOf(draft.multiplier.takeIf { !it.isNaN() }?.toString() ?: "") }
             EditableDetailRow(
                 label = "Multiplier",
-                value = draft.multiplier.takeIf { !it.isNaN() }?.toString() ?: "",
+                value = multiplierText,
                 placeholder = "Add Multiplier",
-                keyboardType = KeyboardType.Number,
-                onChange = {
-                    if(!it.isEmpty())
-                        if (activeType == VariantType.APPROVED){ approvedDraft =
-                            draft.copy(multiplier = it.toDouble())
-                            if(viewModel.isCreateMode && (unapprovedDraft.multiplier == null || unapprovedDraft.multiplier == 0.0))
-                                unapprovedDraft = draft.copy(multiplier = it.toDouble())
-                        } else unapprovedDraft = draft.copy(multiplier = it.toDouble())
+                keyboardType = KeyboardType.Decimal,
+                onChange = { v ->
+                    multiplierText = v
+                    val shouldParse = v.isNotBlank() && !v.endsWith('.')
+                    if (shouldParse) {
+                        v.toDoubleOrNull()?.let { d ->
+                            if (activeType == VariantType.APPROVED) {
+                                approvedDraft = draft.copy(multiplier = d)
+                                if (viewModel.isCreateMode && (unapprovedDraft.multiplier == null || unapprovedDraft.multiplier == 0.0))
+                                    unapprovedDraft = draft.copy(multiplier = d)
+                            } else {
+                                unapprovedDraft = draft.copy(multiplier = d)
+                            }
+                        }
+                    }
                 }
             )
 
@@ -714,19 +752,23 @@ private fun ProductContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            var maxQtyText by remember(activeType) { mutableStateOf(draft.maxQuantity?.takeIf { it != 0 }?.toString() ?: "") }
             EditableDetailRow(
                 label = "Max quantity",
-                value = draft.maxQuantity.toString(),
+                value = maxQtyText,
                 placeholder = "Add max quantity",
                 keyboardType = KeyboardType.Number,
                 onChange = { v ->
-                    val mq = v.toIntOrNull() ?: 1
-                    if (activeType == VariantType.APPROVED){ approvedDraft =
-                        draft.copy(maxQuantity = mq)
-                        if(viewModel.isCreateMode && (unapprovedDraft.maxQuantity == 0 || unapprovedDraft.maxQuantity == null))
+                    maxQtyText = v
+                    v.toIntOrNull()?.let { mq ->
+                        if (activeType == VariantType.APPROVED) {
+                            approvedDraft = draft.copy(maxQuantity = mq)
+                            if (viewModel.isCreateMode && (unapprovedDraft.maxQuantity == 0 || unapprovedDraft.maxQuantity == null))
+                                unapprovedDraft = draft.copy(maxQuantity = mq)
+                        } else {
                             unapprovedDraft = draft.copy(maxQuantity = mq)
-                    } else unapprovedDraft =
-                        draft.copy(maxQuantity = mq)
+                        }
+                    }
                 }
             )
 
