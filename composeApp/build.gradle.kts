@@ -16,20 +16,23 @@ kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
-    // iOS targets
-    val iosTarget = when (System.getenv("SDK_NAME")?.startsWith("iphoneos") == true) {
-        true -> iosArm64("ios")
-        else -> iosX64("ios")
-    }
-    
-    iosTarget.apply {
-        binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
+    // iOS targets (explicit to support all environments incl. Apple Silicon simulators)
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    targets.withType<KotlinNativeTarget> {
+        if (konanTarget.family.isAppleFamily) {
+            binaries.framework {
+                baseName = "ComposeApp"
+                isStatic = true
+                // Re-export shared so consumers only link ComposeApp
+                export(projects.shared)
+            }
         }
     }
     
@@ -61,14 +64,17 @@ kotlin {
             implementation("org.slf4j:slf4j-android:1.7.36")
         }
         
-        // iOS source sets
-        val iosMain by getting {
+        // iOS source sets hierarchy
+        val iosMain by creating {
             dependsOn(commonMain)
             dependencies {
                 // Ktor iOS engine (aligned with shared)
                 implementation("io.ktor:ktor-client-darwin:2.3.4")
             }
         }
+        val iosX64Main by getting { dependsOn(iosMain) }
+        val iosArm64Main by getting { dependsOn(iosMain) }
+        val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
 
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -80,7 +86,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             
             // Shared dependencies
-            implementation(projects.shared)
+            api(projects.shared)
             
             // Koin for dependency injection
             implementation("io.insert-koin:koin-compose:1.1.0")
@@ -148,8 +154,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     // Prevent lint crashes from failing the build while we stabilize multiplatform setup

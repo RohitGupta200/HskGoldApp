@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BB7C89E2E67404E00CC607A /* shared.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		9BB7C89E2E67404E00CC607A /* shared.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = shared.framework; path = ../shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework; sourceTree = "<group>"; };
 		B9DA97B12DC1472C00A4DA20 /* CapGold.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CapGold.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -41,17 +46,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9BB7C89D2E67404E00CC607A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9BB7C89E2E67404E00CC607A /* shared.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B9DA97A82DC1472C00A4DA20 = {
 			isa = PBXGroup;
 			children = (
 				B9DA98002DC14AA900A4DA20 /* Configuration */,
 				B9DA97B32DC1472C00A4DA20 /* iosApp */,
+				9BB7C89D2E67404E00CC607A /* Frameworks */,
 				B9DA97B22DC1472C00A4DA20 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,7 +86,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = B9DA97BF2DC1472D00A4DA20 /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
-				B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */,
+				9BB7C8842E673C5A00CC607A /* Compile Kotlin Framework */,
+				9BB7C8C42E67475700CC607A /* ShellScript */,
 				B9DA97AD2DC1472C00A4DA20 /* Sources */,
 				B9DA97AE2DC1472C00A4DA20 /* Frameworks */,
 				B9DA97AF2DC1472C00A4DA20 /* Resources */,
@@ -135,9 +151,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		B9DA97F42DC1497100A4DA20 /* Compile Kotlin Framework */ = {
+		9BB7C8842E673C5A00CC607A /* Compile Kotlin Framework */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -152,7 +167,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "echo 'Skipping legacy Compose embed script (handled by shared embed script).'; exit 0\n";
+		};
+		9BB7C8C42E67475700CC607A /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\nset -x\n\n# Ensure PATH includes Homebrew bins\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\n\nPROJ_DIR=\"${SRCROOT}/..\"\necho PROJ_DIR=\"$PROJ_DIR\"\nls -la \"$PROJ_DIR\" || true\ncd \"$PROJ_DIR\"\npwd\nls -la || true\n\nif [[ ! -f \"./gradlew\" ]]; then\n  echo \"gradlew not found in $(pwd)\"\n  exit 1\nfi\nchmod +x ./gradlew || true\n\n# Build only ComposeApp framework (it re-exports shared) for the active SDK/config\nif [[ \"${CONFIGURATION}\" == \"Debug\" ]]; then\n  if [[ \"${SDK_NAME}\" == iphonesimulator* ]]; then\n    bash ./gradlew --no-configuration-cache --rerun-tasks :composeApp:linkDebugFrameworkIosSimulatorArm64\n  else\n    bash ./gradlew --no-configuration-cache --rerun-tasks :composeApp:linkDebugFrameworkIosArm64\n  fi\nelse\n  if [[ \"${SDK_NAME}\" == iphonesimulator* ]]; then\n    bash ./gradlew --no-configuration-cache --rerun-tasks :composeApp:linkReleaseFrameworkIosSimulatorArm64\n  else\n    bash ./gradlew --no-configuration-cache --rerun-tasks :composeApp:linkReleaseFrameworkIosArm64\n  fi\nfi\n\n# Embed ComposeApp (which re-exports shared) into TARGET_BUILD_DIR/FRAMEWORKS_FOLDER_PATH\nbash ./gradlew --no-configuration-cache --rerun-tasks \\\n  -Pconfiguration=\"${CONFIGURATION}\" \\\n  -PsdkName=\"${SDK_NAME}\" \\\n  -PtargetBuildDir=\"${TARGET_BUILD_DIR}\" \\\n  -PframeworksFolderPath=\"${FRAMEWORKS_FOLDER_PATH}\" \\\n  composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -300,7 +332,9 @@
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)\n$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
@@ -312,6 +346,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"-framework",
+					ComposeApp,
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -333,7 +371,8 @@
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)\n$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
@@ -345,6 +384,12 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"-framework",
+					shared,
+					"-framework",
+					ComposeApp,
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

@@ -5,13 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import org.cap.gold.R
+import org.jetbrains.compose.resources.painterResource
+import capgold.composeapp.generated.resources.Res
+import capgold.composeapp.generated.resources.logo
 
 @Composable
 actual fun PlatformLogo(modifier: Modifier) {
     Image(
-        painter = painterResource(id = R.drawable.logo),
+        painter = painterResource(Res.drawable.logo),
         contentDescription = "App Logo",
         modifier = modifier,
         contentScale = ContentScale.Fit,

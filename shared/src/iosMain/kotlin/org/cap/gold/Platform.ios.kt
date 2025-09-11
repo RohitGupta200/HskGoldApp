@@ -1,9 +1,5 @@
 package org.cap.gold
 
-import platform.UIKit.UIDevice
-
-class IOSPlatform: Platform {
-    override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
-}
-
-actual fun getPlatform(): Platform = IOSPlatform()
+// Intentionally left blank. iOS platform initialization is implemented in
+// `shared/src/iosMain/kotlin/org/cap/gold/Platform.kt` via `actual fun setupPlatform()`.
+// This stub avoids conflicting declarations with common code.
