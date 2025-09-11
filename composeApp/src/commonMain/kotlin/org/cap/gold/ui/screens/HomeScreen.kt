@@ -108,7 +108,7 @@ fun HomeScreen(
             // Display the current screen based on the route
             when (val screen = currentScreen) {
                 is AppScreen.Products -> ProductsScreen(user = user, navigator = navigator)
-                is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen()
+                is AppScreen.Orders ->  if (user.role == 0) AdminOrdersScreen() else OrdersScreen(User = user)
                 is AppScreen.Users -> if (user.role == 0) UsersScreen(currentUser = user) else {}
                 is AppScreen.Profile -> screen.createScreen(user, onLogout).Content()
 

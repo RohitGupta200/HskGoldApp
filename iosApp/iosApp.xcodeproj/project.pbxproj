@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9BA34AF22E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA34AF12E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta */; };
+		9BA34AF42E6A0EFE00776B13 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA34AF32E6A0EFE00776B13 /* FirebaseMessaging */; };
 		9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BB7C89E2E67404E00CC607A /* shared.framework */; };
 /* End PBXBuildFile section */
 
@@ -46,7 +48,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BA34AF42E6A0EFE00776B13 /* FirebaseMessaging in Frameworks */,
 				9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */,
+				9BA34AF22E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,6 +105,8 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				9BA34AF12E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta */,
+				9BA34AF32E6A0EFE00776B13 /* FirebaseMessaging */,
 			);
 			productName = iosApp;
 			productReference = B9DA97B12DC1472C00A4DA20 /* CapGold.app */;
@@ -130,6 +136,9 @@
 			);
 			mainGroup = B9DA97A82DC1472C00A4DA20;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9BA34AF02E6A0EFE00776B13 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B9DA97B22DC1472C00A4DA20 /* Products */;
 			projectDirPath = "";
@@ -338,6 +347,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "HSK Jewellers";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -351,6 +361,7 @@
 					"-framework",
 					ComposeApp,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.hsk.app;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -376,6 +387,7 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "HSK Jewellers";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -391,6 +403,7 @@
 					"-framework",
 					ComposeApp,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.hsk.app;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -419,6 +432,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9BA34AF02E6A0EFE00776B13 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9BA34AF12E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9BA34AF02E6A0EFE00776B13 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		9BA34AF32E6A0EFE00776B13 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9BA34AF02E6A0EFE00776B13 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B9DA97A92DC1472C00A4DA20 /* Project object */;
 }

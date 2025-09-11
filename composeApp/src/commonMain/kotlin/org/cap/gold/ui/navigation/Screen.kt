@@ -37,11 +37,11 @@ sealed class AppScreen(
         route = "orders",
         title = "Orders",
         icon = Icons.AutoMirrored.Filled.ListAlt,
-        createScreen = { _, _ ->
+        createScreen = { user, _ ->
             object : Screen {
                 @Composable
                 override fun Content() {
-                    OrdersScreen()
+                    OrdersScreen(User = user)
                 }
             }
         }

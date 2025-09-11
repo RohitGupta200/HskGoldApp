@@ -32,10 +32,9 @@ class AppOrderRepositoryImpl : AppOrderRepository, KoinComponent {
         mobileNumber: String?
     ): NetworkResponse<PaginatedResponse<Order>> {
         return try {
-            val response = client.get("/api/orders/user") {
+            val response = client.get("/api/orders/user/$mobileNumber") {
                 // Server may ignore pagination currently; still send for future compatibility
                 parameter("page", page)
-                parameter("pageSize", pageSize)
                 status?.let { parameter("status", it.name) }
                 statusGroup?.let { parameter("statusGroup", it.name) }
             }

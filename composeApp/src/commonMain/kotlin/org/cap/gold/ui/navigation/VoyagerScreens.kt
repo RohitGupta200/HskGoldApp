@@ -52,7 +52,7 @@ class ProductDetailVoyagerScreen(
                     override val key: ScreenKey = "orders_from_product_update"
                     @Composable
                     override fun Content() {
-                        OrdersScreen()
+                        OrdersScreen(User = user)
                     }
                 })},
             onProductUpdated = { navigator?.pop() },

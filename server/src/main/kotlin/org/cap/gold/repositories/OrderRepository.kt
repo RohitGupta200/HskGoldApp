@@ -99,7 +99,7 @@ class OrderRepository {
     suspend fun getUserOrders(
         userMobile: String,
         page: Int = 0,
-        pageSize: Int = 30,
+        pageSize: Int = 150,
         status: OrderStatus? = null,
         statusGroup: OrderStatusGroup? = null
     ): Pair<List<Order>, Long> = transaction {

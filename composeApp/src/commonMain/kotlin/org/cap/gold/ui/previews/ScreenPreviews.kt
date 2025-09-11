@@ -33,7 +33,7 @@ private val testUser = User(
 fun OrdersScreenPreview() {
     MaterialTheme {
         Surface {
-            OrdersScreen()
+            OrdersScreen(User = User("",""))
         }
     }
 }
@@ -81,7 +81,7 @@ fun MainNavigationPreview() {
                 ) {
                     when (currentRoute) {
                         AppScreen.Products.route -> ProductsScreen(user = testUser)
-                        AppScreen.Orders.route -> OrdersScreen()
+                        AppScreen.Orders.route -> OrdersScreen(User = testUser)
                         AppScreen.Profile.route -> ProfileScreen(user = testUser, onLogout = {})
                         AppScreen.Users.route -> UsersScreen(currentUser = testUser)
                     }

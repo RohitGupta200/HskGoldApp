@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.cap.gold.data.model.OrderStatus
 import org.cap.gold.data.repository.AppOrderRepository
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -15,14 +14,15 @@ import org.cap.gold.model.User
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class OrdersViewModel : KoinComponent {
+class OrdersViewModel() : KoinComponent {
     private val orderRepository: AppOrderRepository by inject()
 
-    private val user: User by inject()
     private val scope = CoroutineScope(Dispatchers.Main)
     
     var uiState: OrdersUiState by mutableStateOf(OrdersUiState.Loading)
         private set
+
+    var user: User = User("","")
     
     private fun formatDate(millis: Long): String {
         return try {
