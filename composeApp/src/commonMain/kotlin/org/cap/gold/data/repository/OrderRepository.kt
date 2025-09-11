@@ -12,7 +12,8 @@ interface AppOrderRepository {
         page: Int = 0,
         pageSize: Int = 10,
         status: OrderStatus? = null,
-        statusGroup: OrderStatusGroup? = null
+        statusGroup: OrderStatusGroup? = null,
+        mobileNumber: String? = null
     ): NetworkResponse<PaginatedResponse<Order>>
     
     suspend fun getAllOrders(

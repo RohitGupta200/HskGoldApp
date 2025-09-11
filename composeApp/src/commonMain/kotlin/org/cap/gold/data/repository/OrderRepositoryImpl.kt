@@ -28,10 +28,11 @@ class AppOrderRepositoryImpl : AppOrderRepository, KoinComponent {
         page: Int,
         pageSize: Int,
         status: OrderStatus?,
-        statusGroup: OrderStatusGroup?
+        statusGroup: OrderStatusGroup?,
+        mobileNumber: String?
     ): NetworkResponse<PaginatedResponse<Order>> {
         return try {
-            val response = client.get("/api/orders") {
+            val response = client.get("/api/orders/user") {
                 // Server may ignore pagination currently; still send for future compatibility
                 parameter("page", page)
                 parameter("pageSize", pageSize)

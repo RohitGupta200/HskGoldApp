@@ -23,7 +23,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.text.input.KeyboardType
+ import androidx.compose.ui.text.input.TextFieldValue
+ import androidx.compose.ui.text.TextRange
+ import androidx.compose.ui.focus.onFocusChanged
+ import androidx.compose.ui.focus.FocusRequester
+ import androidx.compose.ui.focus.focusRequester
+ import androidx.compose.foundation.gestures.detectTapGestures
+ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -166,15 +173,42 @@ private fun EditableDetailRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Box(modifier = Modifier.widthIn(min = 120.dp)) {
+            val focusRequester = remember { FocusRequester() }
+            var textFieldValue by remember { mutableStateOf(TextFieldValue(text = value)) }
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 120.dp)
+            ) {
+                LaunchedEffect(value) {
+                    if (value != textFieldValue.text) {
+                        textFieldValue = textFieldValue.copy(text = value, selection = TextRange(value.length))
+                    }
+                }
+
                 BasicTextField(
-                    value = value,
-                    onValueChange = onChange,
+                    value = textFieldValue,
+                    onValueChange = { newValue ->
+                        textFieldValue = newValue
+                        onChange(newValue.text)
+                    },
                     textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .pointerInput(textFieldValue.text) {
+                            detectTapGestures(onTap = {
+                                focusRequester.requestFocus()
+                                textFieldValue = textFieldValue.copy(selection = TextRange(0, textFieldValue.text.length))
+                            })
+                        }
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                textFieldValue = textFieldValue.copy(selection = TextRange(0, textFieldValue.text.length))
+                            }
+                        },
                     keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
                 ) { inner ->
-                    if (value.isEmpty()) {
+                    if (textFieldValue.text.isEmpty()) {
                         Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                     }
                     inner()

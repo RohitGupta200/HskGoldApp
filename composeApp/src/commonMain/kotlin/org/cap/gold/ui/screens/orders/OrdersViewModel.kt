@@ -11,11 +11,14 @@ import org.cap.gold.data.repository.AppOrderRepository
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.cap.gold.model.User
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class OrdersViewModel : KoinComponent {
     private val orderRepository: AppOrderRepository by inject()
+
+    private val user: User by inject()
     private val scope = CoroutineScope(Dispatchers.Main)
     
     var uiState: OrdersUiState by mutableStateOf(OrdersUiState.Loading)
@@ -35,7 +38,7 @@ class OrdersViewModel : KoinComponent {
         uiState = OrdersUiState.Loading
         scope.launch {
             try {
-                when (val resp = orderRepository.getUserOrders()) {
+                when (val resp = orderRepository.getUserOrders(mobileNumber = user.phoneNumber)) {
                     is org.cap.gold.data.network.NetworkResponse.Success -> {
                         val orders = resp.data.data.map { order ->
                             val dateMillis = order.createdAt
