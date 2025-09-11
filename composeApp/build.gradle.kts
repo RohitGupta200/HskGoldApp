@@ -59,6 +59,9 @@ kotlin {
             // Firebase Cloud Messaging (explicit versions for KMP DSL)
             implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
             implementation("com.google.firebase:firebase-common-ktx:21.0.0")
+
+            // SLF4J binding for Android to satisfy R8 (missing StaticLoggerBinder)
+            implementation("org.slf4j:slf4j-android:1.7.36")
         }
         
         // iOS source sets hierarchy
@@ -129,11 +132,11 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "org.cap.gold"
+        applicationId = "org.hsk.gold"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 2
-        versionName = "1.0.0.0.1"
+        versionCode = 9
+        versionName = "1.0.0.0.6"
     }
     packaging {
         resources {
@@ -142,7 +145,11 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            // Ship a hardened release build
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
+            // Using debug signing for local installs; switch to a proper release signingConfig for store builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }

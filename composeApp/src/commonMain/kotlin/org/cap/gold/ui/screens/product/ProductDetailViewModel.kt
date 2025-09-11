@@ -49,6 +49,8 @@ class ProductDetailViewModel(
     var syncPrices by mutableStateOf(false)
 
     val fields = mutableStateListOf<Field>()
+
+    val fieldsUnapproved = mutableStateListOf<Field>()
     // Image selection state (admin edit/create)
     var selectedImageBytes by mutableStateOf<ByteArray?>(null)
         private set
@@ -146,8 +148,9 @@ class ProductDetailViewModel(
                     )
                     else null
                     // Populate fields from customFields JSON
-                    val fieldsJson = both?.approved?.customFields ?: both?.unapproved?.customFields
+                    val fieldsJson = both?.approved?.customFields
                     setFieldsFromJson(fieldsJson)
+                    setUnApprovedFieldsFromJson(both?.unapproved?.customFields)
                     p
                 } else if (isApprovedUser) {
                     val p = productApiService.getProductById(productId)
@@ -304,6 +307,10 @@ class ProductDetailViewModel(
         fields.add(Field(label, value))
     }
 
+    fun addUnApprovedField(label: String, value: String) {
+        fieldsUnapproved.add(Field(label, value))
+    }
+
     fun removeField(i:Int) {
         fields.removeAt(i)
     }
@@ -329,6 +336,7 @@ class ProductDetailViewModel(
         viewModelScope.launch {
             try {
                 val fieldsJson = buildCustomFieldsJson()
+                val unApprovedFieldsJson = buildUnApprovedCustomFieldsJson()
                 // If requested, copy price from approved to unapproved before save
                 val approvedFinal = approved
                 val unapprovedFinal = unapproved
@@ -340,7 +348,7 @@ class ProductDetailViewModel(
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
                         approvedCustomFields = approvedFinal?.let { fieldsJson },
-                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson },
+                        unapprovedCustomFields = unapprovedFinal?.let { unApprovedFieldsJson },
                         applyToAll = syncPrices
                     )
                     // Reload preferring approved
@@ -382,7 +390,7 @@ class ProductDetailViewModel(
                         imageBytes = selectedImageBytes,
                         imageFileName = selectedImageFileName,
                         approvedCustomFields = approvedFinal?.let { fieldsJson },
-                        unapprovedCustomFields = unapprovedFinal?.let { fieldsJson },
+                        unapprovedCustomFields = unapprovedFinal?.let { unApprovedFieldsJson },
                         applyToAll = syncPrices
                     )
                     // Reload preferring approved
@@ -437,6 +445,15 @@ class ProductDetailViewModel(
         }
     }
 
+    private fun buildUnApprovedCustomFieldsJson(): String {
+        return try {
+            val list = fieldsUnapproved.map { FieldDto(it.label, it.value) }
+            Json.encodeToString(ListSerializer(FieldDto.serializer()), list)
+        } catch (_: Exception) {
+            "[]"
+        }
+    }
+
     private fun setFieldsFromJson(json: String?) {
         if (json.isNullOrBlank()) {
             fields.clear()
@@ -449,6 +466,21 @@ class ProductDetailViewModel(
         }.onFailure {
             // On parse failure, keep existing fields or clear
             fields.clear()
+        }
+    }
+
+    private fun setUnApprovedFieldsFromJson(json: String?) {
+        if (json.isNullOrBlank()) {
+            fieldsUnapproved.clear()
+            return
+        }
+        runCatching {
+            val dtos = Json.decodeFromString(ListSerializer(FieldDto.serializer()), json)
+            fieldsUnapproved.clear()
+            fieldsUnapproved.addAll(dtos.map { Field(it.label, it.value) })
+        }.onFailure {
+            // On parse failure, keep existing fields or clear
+            fieldsUnapproved.clear()
         }
     }
 
