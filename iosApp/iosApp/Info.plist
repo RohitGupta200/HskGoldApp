@@ -4,10 +4,5 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<!-- App display name and bundle name -->
-	<key>CFBundleDisplayName</key>
-	<string>HSK</string>
-	<key>CFBundleName</key>
-	<string>HSK</string>
 </dict>
 </plist>

@@ -29,7 +29,10 @@ data class PhoneSignUpRequest(
 data class EmailSignInRequest(
     val email: String,
     val password: String,
-    val deviceToken: String? = null
+     val deviceToken: String? = null,
+    // Optional platform hint for server ("android" by default on server).
+    // We will send "ios" from iOS so adminUsers can distinguish devices.
+    val platform: String? = null
 )
 
 /**

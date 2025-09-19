@@ -376,6 +376,13 @@ fun Application.module() {
             END $$;
             """.trimIndent()
         )
+
+        // 4) Ensure Admin_users has deviceType with default 'android'
+        exec(
+            """
+            ALTER TABLE Admin_users ADD COLUMN IF NOT EXISTS deviceType VARCHAR(16) DEFAULT 'android';
+            """.trimIndent()
+        )
     }
     
     // Configure Koin for dependency injection

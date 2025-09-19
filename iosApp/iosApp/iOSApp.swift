@@ -1,9 +1,11 @@
 import SwiftUI
 import Foundation
 import ComposeApp
+import UIKit
 
 @main
 struct iOSApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     init() {
         // Initialize platform-specific code from Kotlin
         PlatformKt.setupPlatform()

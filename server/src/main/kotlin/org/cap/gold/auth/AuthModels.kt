@@ -13,7 +13,8 @@ data class PhoneSignInRequest(
 data class EmailSignInRequest(
     val email: String,
     val password: String,
-    val deviceToken: String? = null
+    val deviceToken: String? = null,
+    val platform: String? = null // "android" or "ios"; server defaults to "android"
 )
 
 @Serializable

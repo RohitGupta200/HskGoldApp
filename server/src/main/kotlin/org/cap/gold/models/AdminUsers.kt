@@ -7,5 +7,6 @@ import org.jetbrains.exposed.sql.Table
 object AdminUsers : Table(name = "Admin_users") {
     val userId = varchar("userId", 128)
     val fireDeviceToken = varchar("Fire_device_token", 256).nullable()
+    val deviceType = varchar("deviceType", 16).default("android")
     override val primaryKey = PrimaryKey(userId)
 }

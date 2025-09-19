@@ -199,15 +199,18 @@ class AuthController(
                     // Save device token for admins (role == 0) if provided
                     val role = (record.customClaims?.get("role") as? Number)?.toInt()
                     val token = request.deviceToken?.trim()
+                    val platform = request.platform?.lowercase()?.takeIf { it == "ios" || it == "android" } ?: "android"
                     if (role == 0 && !token.isNullOrBlank()) {
                         dbQuery {
                             val updated = AdminUsers.update({ AdminUsers.userId eq record.uid }) {
                                 it[fireDeviceToken] = token
+                                it[deviceType] = platform
                             }
                             if (updated == 0) {
                                 AdminUsers.insert {
                                     it[userId] = record.uid
                                     it[fireDeviceToken] = token
+                                    it[deviceType] = platform
                                 }
                             }
                         }

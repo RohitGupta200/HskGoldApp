@@ -226,7 +226,11 @@ class KtorAuthService(
             val token = try { getDeviceTokenFast() } catch (_: Exception) { null }
             val httpResponse = client.post("$baseUrl/api/auth/signin/email") {
                 contentType(ContentType.Application.Json)
-                setBody(EmailSignInRequest(email = email, password = password, deviceToken = token))
+                val plat = try {
+                    val n = PlatformInfo.platform.name.lowercase()
+                    if (n.contains("android")) "android" else "ios"
+                } catch (_: Exception) { null }
+                setBody(EmailSignInRequest(email = email, password = password, deviceToken = token, platform = plat))
             }
             val response: AuthResponse = if (httpResponse.status.value in 200..299) {
                 val parsed = httpResponse.safeParseAuth()
