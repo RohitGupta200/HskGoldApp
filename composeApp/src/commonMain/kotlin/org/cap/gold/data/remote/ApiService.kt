@@ -211,7 +211,8 @@ class ProductApiServiceImpl(
         weight = this.weight,
         purity = this.purity,
         dimension = this.dimension,
-        maxQuantity = this.maxQuantity
+        maxQuantity = this.maxQuantity,
+        customFields = this.customFields,
     )
 
     private fun ListProductResponse.toProduct(id: String): Product = Product(

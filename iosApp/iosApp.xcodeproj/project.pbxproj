@@ -9,11 +9,9 @@
 /* Begin PBXBuildFile section */
 		9BA34AF22E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA34AF12E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta */; };
 		9BA34AF42E6A0EFE00776B13 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 9BA34AF32E6A0EFE00776B13 /* FirebaseMessaging */; };
-		9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BB7C89E2E67404E00CC607A /* shared.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		9BB7C89E2E67404E00CC607A /* shared.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = shared.framework; path = ../shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework; sourceTree = "<group>"; };
 		B9DA97B12DC1472C00A4DA20 /* CapGold.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CapGold.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -49,7 +47,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9BA34AF42E6A0EFE00776B13 /* FirebaseMessaging in Frameworks */,
-				9BB7C89F2E67404E00CC607A /* shared.framework in Frameworks */,
 				9BA34AF22E6A0EFE00776B13 /* FirebaseInAppMessaging-Beta in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -60,7 +57,6 @@
 		9BB7C89D2E67404E00CC607A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				9BB7C89E2E67404E00CC607A /* shared.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -337,11 +333,10 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = DFAF6XYPG5;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 					"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)",
 				);
@@ -362,6 +357,7 @@
 					ComposeApp,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.hsk.app;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -378,12 +374,12 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = DFAF6XYPG5;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
 					"$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)",
+					"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
@@ -399,11 +395,10 @@
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
 					"-framework",
-					shared,
-					"-framework",
 					ComposeApp,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.hsk.app;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

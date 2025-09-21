@@ -322,11 +322,12 @@ private fun QuantitySelector(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("Quantity")
-        Row(verticalAlignment = Alignment.CenterVertically
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
         , modifier = Modifier.padding(horizontal = 10.dp)) {
             IconButton(onClick = onDecrement, enabled = quantity > 1) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrease")
@@ -480,7 +481,7 @@ fun ProductDetailScreen(
                                     message = "Order request sent",
                                     subMessage = "We will confirm your order soon"
                                 )
-                                delay(1000)
+                                delay(5000)
                                 statusDialog.hide()
                             }
                             onOrderSuccess(it.id) }
@@ -921,12 +922,12 @@ private fun ProductContent(
             ProductDetailRow("Dimensions", product.dimension)
             DottedDivider()
             ProductDetailRow("Category", product.category)
-
+            DottedDivider()
             Spacer(modifier = Modifier.height(8.dp))
             for(i in viewModel.fields.indices){
-                DottedDivider()
                 ProductCustomRow( viewModel.fields[i].label, viewModel.fields[i].value, isAdmin, onRemoveField = { viewModel.removeField(i) })
                 Spacer(modifier = Modifier.height(8.dp))
+                DottedDivider()
             }
         }
 
@@ -937,8 +938,6 @@ private fun ProductContent(
             
             // --- Order Section for non-admins ---
             if (!isAdmin) {
-                Spacer(modifier = Modifier.height(8.dp))
-                DottedDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Quantity Selector

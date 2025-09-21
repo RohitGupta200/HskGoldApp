@@ -286,7 +286,18 @@ fun Application.module() {
     DatabaseFactory(environment.config)
     // Auto-create schema and run lightweight migration for newly added non-null columns
     transaction {
-        // 1) Ensure 'name' column exists and is backfilled for existing rows, then enforce NOT NULL
+        // 1) Create any missing tables/columns for the rest of the schema FIRST
+        SchemaUtils.createMissingTablesAndColumns(
+            ProductsApproved,
+            ProductsUnapproved,
+            Orders,
+            Categories,
+            ProductImages,
+            AdminUsers,
+            AboutUsTable
+        )
+
+        // 2) Ensure 'name' column exists and is backfilled for existing rows, then enforce NOT NULL
         // Approved table
         exec("""
             ALTER TABLE products_approved ADD COLUMN IF NOT EXISTS name VARCHAR(200);
@@ -309,7 +320,7 @@ fun Application.module() {
             ALTER TABLE products_unapproved ALTER COLUMN name SET NOT NULL;
         """.trimIndent())
 
-        // 1.b) Ensure 'description' column exists, backfill, and enforce NOT NULL (both tables)
+        // 2.b) Ensure 'description' column exists, backfill, and enforce NOT NULL (both tables)
         // Approved table
         exec("""
             ALTER TABLE products_approved ADD COLUMN IF NOT EXISTS description VARCHAR(1000);
@@ -331,17 +342,6 @@ fun Application.module() {
         exec("""
             ALTER TABLE products_unapproved ALTER COLUMN description SET NOT NULL;
         """.trimIndent())
-
-        // 2) Create any missing tables/columns for the rest of the schema
-        SchemaUtils.createMissingTablesAndColumns(
-            ProductsApproved,
-            ProductsUnapproved,
-            Orders,
-            Categories,
-            ProductImages,
-            AdminUsers,
-            AboutUsTable
-        )
 
         // 3) Migrate product weight column type from numeric to varchar(50) if needed (both tables)
         // This block is idempotent: it only alters when the existing type is not character varying

@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.rememberAsyncImagePainter
 import org.cap.gold.data.model.Product
+import org.cap.gold.util.formatAmount
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -84,7 +85,7 @@ fun ProductItem(
             
             // Product Price
             Text(
-                text = "₹${calculatedPrice}",
+                text = "₹${formatAmount(calculatedPrice)}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 2.dp)

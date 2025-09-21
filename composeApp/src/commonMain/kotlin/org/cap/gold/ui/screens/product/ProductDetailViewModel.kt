@@ -155,15 +155,13 @@ class ProductDetailViewModel(
                 } else if (isApprovedUser) {
                     val p = productApiService.getProductById(productId)
                     // Fetch customFields from approved variant
-                    val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
-                    val fieldsJson = both?.approved?.customFields
+                    val fieldsJson = p.customFields
                     setFieldsFromJson(fieldsJson)
                     p
                 } else {
                     val p = productApiService.getUnapprovedProductById(productId)
                     // Fetch customFields from unapproved variant
-                    val both = runCatching { productApiService.getBothVariantsById(productId) }.getOrNull()
-                    val fieldsJson = both?.unapproved?.customFields
+                    val fieldsJson = p.customFields
                     setFieldsFromJson(fieldsJson)
                     p
                 }

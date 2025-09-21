@@ -244,11 +244,11 @@ fun OrderItem(
             )
         }
 
-        Column(modifier = Modifier.weight(.6f), horizontalAlignment = Alignment.End) {
+        Column(modifier = Modifier.weight(.8f), horizontalAlignment = Alignment.End) {
             // Right: total amount
             Text(
                 text = "₹ ${formatAmount(order.totalAmount)}",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(2.dp))

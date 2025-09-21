@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -290,7 +291,8 @@ fun AdminOrderItem(
                 Text(
                     text = "${order.productName} • ${order.formattedDate}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
                 )
                 
                 // Amount color by status
@@ -303,12 +305,17 @@ fun AdminOrderItem(
                     OrderStatus.COMPLETED -> MaterialTheme.colorScheme.primary
                     OrderStatus.PARTIAL_COMPLETED -> Color(0xFFFF6D00)
                 }
-                Text(
-                    text = "₹ ${formatAmount(order.totalAmount)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Normal,
-                    color = amountColor
-                )
+
+                Column(modifier = Modifier.weight(.6f), horizontalAlignment = Alignment.End) {
+                    // Right: total amount
+
+                    Text(
+                        text = "₹ ${formatAmount(order.totalAmount)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Normal,
+                        color = amountColor,
+                    )
+                }
             }
         }
         
