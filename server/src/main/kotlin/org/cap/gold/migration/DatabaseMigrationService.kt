@@ -29,23 +29,56 @@ class DatabaseMigrationService(
     }
 
     private fun createDatabase(url: String, user: String, password: String, name: String): Database {
+        val normalizedUrl = normalizeJdbcUrl(url)
+        println("Connecting to $name database: ${maskCredentials(normalizedUrl)}")
+
         val config = HikariConfig().apply {
             driverClassName = "org.postgresql.Driver"
-            jdbcUrl = normalizeJdbcUrl(url)
+            jdbcUrl = normalizedUrl
             username = user
             this.password = password
-            maximumPoolSize = 5
-            connectionTimeout = 30000
+            maximumPoolSize = 3
+            minimumIdle = 1
+            connectionTimeout = 60000  // 60 seconds
+            idleTimeout = 300000       // 5 minutes
+            maxLifetime = 600000       // 10 minutes
+            leakDetectionThreshold = 60000
+
+            // Add connection test query
+            connectionTestQuery = "SELECT 1"
+
             validate()
         }
 
-        val dataSource = HikariDataSource(config)
-        return Database.connect(dataSource)
+        try {
+            val dataSource = HikariDataSource(config)
+
+            // Test the connection immediately
+            dataSource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeQuery("SELECT 1").use { rs ->
+                        if (rs.next()) {
+                            println("✅ Successfully connected to $name database")
+                        }
+                    }
+                }
+            }
+
+            return Database.connect(dataSource)
+        } catch (e: Exception) {
+            println("❌ Failed to connect to $name database: ${e.message}")
+            throw e
+        }
+    }
+
+    private fun maskCredentials(url: String): String {
+        return url.replace(Regex("://([^:]+):([^@]+)@"), "://$1:****@")
     }
 
     private fun normalizeJdbcUrl(url: String): String {
         // Use the same proven logic from DatabaseFactory
-        return normalizeJdbcUrlWithSSL(url, null)
+        // Add SSL for external connections (like Supabase)
+        return normalizeJdbcUrlWithSSL(url, "require")
     }
 
     // Copied from DatabaseFactory.kt - proven working URL normalization
