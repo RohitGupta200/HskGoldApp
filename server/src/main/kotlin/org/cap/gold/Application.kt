@@ -37,6 +37,7 @@ import org.cap.gold.controllers.ProductController
 import org.cap.gold.controllers.CategoryController
 import org.cap.gold.controllers.OrderController
 import org.cap.gold.dao.OrderDao
+import org.cap.gold.migration.migrationRoutes
 import org.cap.gold.exceptions.*
 import org.cap.gold.models.CreateOrderRequest
 import org.cap.gold.models.Order
@@ -273,6 +274,9 @@ private fun Application.configureRouting(authController: AuthController) {
                 val orderController: OrderController by inject()
                 orderController.apply { this@authenticate.orderRoutes() }
             }
+
+            // Migration routes (admin only)
+            migrationRoutes()
         }
     }
 }

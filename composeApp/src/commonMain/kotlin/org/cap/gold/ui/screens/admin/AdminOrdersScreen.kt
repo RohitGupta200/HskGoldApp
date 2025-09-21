@@ -290,7 +290,8 @@ fun AdminOrderItem(
                 Text(
                     text = "${order.productName} • ${order.formattedDate}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
                 )
                 
                 // Amount color by status
@@ -305,9 +306,10 @@ fun AdminOrderItem(
                 }
                 Text(
                     text = "₹ ${formatAmount(order.totalAmount)}",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Normal,
-                    color = amountColor
+                    color = amountColor,
+                    modifier = Modifier.weight(0.6f)
                 )
             }
         }

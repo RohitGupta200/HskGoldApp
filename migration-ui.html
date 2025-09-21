@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CapGold Database Migration</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"], input[type="url"] {
+            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+        }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 CapGold Database Migration</h1>
+    <p>Migrate your database from Render to Supabase</p>
+
+    <form id="migrationForm">
+        <div class="form-group">
+            <label for="appUrl">Your Render App URL:</label>
+            <input type="url" id="appUrl" placeholder="https://your-app-name.onrender.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="projectRef">Supabase Project Reference:</label>
+            <input type="text" id="projectRef" placeholder="abcdefghijklmnop" required>
+            <small>Found in your Supabase database settings (db.XXX.supabase.co)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Supabase Database Password:</label>
+            <input type="password" id="password" required>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="dryRun"> Dry Run (test connection only)
+            </label>
+        </div>
+
+        <button type="submit" id="submitBtn">Start Migration</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        const form = document.getElementById('migrationForm');
+        const resultDiv = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const appUrl = document.getElementById('appUrl').value.replace(/\/$/, '');
+            const projectRef = document.getElementById('projectRef').value;
+            const password = document.getElementById('password').value;
+            const dryRun = document.getElementById('dryRun').checked;
+
+            const targetUrl = `postgresql://postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = dryRun ? 'Testing...' : 'Migrating...';
+
+            resultDiv.innerHTML = '<div class="info">Migration in progress...</div>';
+
+            try {
+                const response = await fetch(`${appUrl}/api/admin/migration/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        targetUrl: targetUrl,
+                        targetPassword: password,
+                        dryRun: dryRun
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ ${dryRun ? 'Test' : 'Migration'} Successful!</h3>
+                            <p>${result.message}</p>
+                            ${result.result ? `
+                                <h4>Migration Summary:</h4>
+                                <ul>
+                                    <li>Admin Users: ${result.result.adminUsers}</li>
+                                    <li>Categories: ${result.result.categories}</li>
+                                    <li>About Us: ${result.result.aboutUs}</li>
+                                    <li>Approved Products: ${result.result.productsApproved}</li>
+                                    <li>Unapproved Products: ${result.result.productsUnapproved}</li>
+                                    <li>Product Images: ${result.result.productImages}</li>
+                                    <li>Orders: ${result.result.orders}</li>
+                                    <li><strong>Total Records: ${result.result.adminUsers + result.result.categories + result.result.aboutUs + result.result.productsApproved + result.result.productsUnapproved + result.result.productImages + result.result.orders}</strong></li>
+                                </ul>
+                            ` : ''}
+                            ${result.verification && result.verification.success ? '<p>✅ Verification passed!</p>' : ''}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Migration Failed</h3>
+                            <p>${result.message}</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Start Migration';
+            }
+        });
+
+        // Test connection button
+        const testBtn = document.createElement('button');
+        testBtn.textContent = 'Test Migration Tool';
+        testBtn.type = 'button';
+        testBtn.style.marginLeft = '10px';
+        testBtn.addEventListener('click', async () => {
+            const appUrl = document.getElementById('appUrl').value.replace(/\/$/, '');
+            if (!appUrl) {
+                alert('Please enter your app URL first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${appUrl}/api/admin/migration/status`);
+                const result = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ ${result.message}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Cannot connect to migration tool: ${error.message}</div>`;
+            }
+        });
+
+        submitBtn.parentNode.insertBefore(testBtn, submitBtn.nextSibling);
+    </script>
+</body>
+</html>
