@@ -212,8 +212,8 @@ fun OrderItem(
         val painter = rememberAsyncImagePainter(model = imageBytes)
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFFEDEDED))
         ) {
             if (imageBytes != null) {
