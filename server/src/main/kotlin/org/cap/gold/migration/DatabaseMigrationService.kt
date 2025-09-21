@@ -13,18 +13,15 @@ import java.util.*
 import javax.sql.DataSource
 
 class DatabaseMigrationService(
-    private val sourceUrl: String,
-    private val sourceUser: String,
-    private val sourcePassword: String,
     private val targetUrl: String,
     private val targetUser: String,
     private val targetPassword: String
 ) {
-    private lateinit var sourceDb: Database
     private lateinit var targetDb: Database
 
     suspend fun initializeDatabases() {
-        sourceDb = createDatabase(sourceUrl, sourceUser, sourcePassword, "source")
+        // Use existing database connection for source (already connected via DatabaseFactory)
+        // Only create new connection for target
         targetDb = createDatabase(targetUrl, targetUser, targetPassword, "target")
 
         // Create tables in target database
@@ -47,67 +44,49 @@ class DatabaseMigrationService(
     }
 
     private fun normalizeJdbcUrl(url: String): String {
-        // If already a JDBC URL, fix port if missing
-        if (url.startsWith("jdbc:postgresql://")) {
-            return addPortIfMissing(url)
-        }
-
-        // Convert postgresql:// or postgres:// to jdbc:postgresql://
-        val jdbcUrl = when {
-            url.startsWith("postgresql://") -> url.replace("postgresql://", "jdbc:postgresql://")
-            url.startsWith("postgres://") -> url.replace("postgres://", "jdbc:postgresql://")
-            else -> url
-        }
-
-        return addPortIfMissing(jdbcUrl)
+        // Use the same proven logic from DatabaseFactory
+        return normalizeJdbcUrlWithSSL(url, null)
     }
 
-    private fun addPortIfMissing(jdbcUrl: String): String {
-        if (!jdbcUrl.startsWith("jdbc:postgresql://")) {
-            return jdbcUrl
+    // Copied from DatabaseFactory.kt - proven working URL normalization
+    private fun normalizeJdbcUrlWithSSL(url: String, sslMode: String?): String {
+        if (url.startsWith("jdbc:")) return applySslModeIfProvided(url, sslMode)
+        if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
+            val normalized = if (url.startsWith("postgres://")) url.replaceFirst("postgres://", "postgresql://") else url
+            val uri = java.net.URI(normalized)
+            val host = uri.host
+            val port = if (uri.port == -1) 5432 else uri.port
+            val database = uri.path.trimStart('/')
+            val query = uri.rawQuery ?: ""
+            val jdbcBase = "jdbc:postgresql://$host:$port/$database"
+            val finalQuery = if (sslMode.isNullOrBlank()) query else ensureOrOverrideSslInQuery(query, sslMode)
+            return if (finalQuery.isBlank()) jdbcBase else "$jdbcBase?$finalQuery"
         }
+        return applySslModeIfProvided(url, sslMode)
+    }
 
-        try {
-            // Extract the part after jdbc:postgresql://
-            val urlPart = jdbcUrl.substring("jdbc:postgresql://".length)
+    private fun applySslModeIfProvided(jdbcUrl: String, sslMode: String?): String {
+        if (sslMode.isNullOrBlank()) return jdbcUrl
+        val parts = jdbcUrl.split("?", limit = 2)
+        val base = parts[0]
+        val query = if (parts.size > 1) parts[1] else ""
+        val finalQuery = ensureOrOverrideSslInQuery(query, sslMode)
+        return if (finalQuery.isBlank()) base else "$base?$finalQuery"
+    }
 
-            // Check if it already has a port
-            if (urlPart.contains(":") && urlPart.indexOf(":") < urlPart.indexOf("/")) {
-                return jdbcUrl // Port already present
+    private fun ensureOrOverrideSslInQuery(query: String, sslMode: String): String {
+        if (query.isBlank()) return "sslmode=$sslMode"
+        val params = query.split('&').toMutableList()
+        var found = false
+        for (i in params.indices) {
+            if (params[i].startsWith("sslmode=")) {
+                params[i] = "sslmode=$sslMode"
+                found = true
+                break
             }
-
-            // Split by @ to handle user:password@host/database format
-            val parts = urlPart.split("@")
-            if (parts.size == 2) {
-                val credentials = parts[0]
-                val hostAndDb = parts[1]
-
-                // Add port 5432 before the database name
-                val dbIndex = hostAndDb.indexOf("/")
-                if (dbIndex > 0) {
-                    val host = hostAndDb.substring(0, dbIndex)
-                    val database = hostAndDb.substring(dbIndex)
-                    return "jdbc:postgresql://$credentials@$host:5432$database"
-                } else {
-                    // No database specified, add port at the end
-                    return "jdbc:postgresql://$credentials@$hostAndDb:5432"
-                }
-            } else {
-                // No credentials, just host/database
-                val dbIndex = urlPart.indexOf("/")
-                if (dbIndex > 0) {
-                    val host = urlPart.substring(0, dbIndex)
-                    val database = urlPart.substring(dbIndex)
-                    return "jdbc:postgresql://$host:5432$database"
-                } else {
-                    // No database specified
-                    return "jdbc:postgresql://$urlPart:5432"
-                }
-            }
-        } catch (e: Exception) {
-            println("Warning: Could not parse JDBC URL: $jdbcUrl, using as-is")
-            return jdbcUrl
         }
+        if (!found) params.add("sslmode=$sslMode")
+        return params.joinToString("&")
     }
 
     private fun createTargetSchema() {
@@ -155,8 +134,8 @@ class DatabaseMigrationService(
     private suspend fun migrateAdminUsers(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        // Read from source
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        // Read from source (using default database connection)
+        val sourceData = newSuspendedTransaction {
             AdminUsers.selectAll().map { row ->
                 Triple(
                     row[AdminUsers.userId],
@@ -185,7 +164,7 @@ class DatabaseMigrationService(
     private suspend fun migrateCategories(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             Categories.selectAll().map { row ->
                 Pair(
                     row[Categories.id].value,
@@ -211,7 +190,7 @@ class DatabaseMigrationService(
     private suspend fun migrateAboutUs(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             AboutUsTable.selectAll().map { row ->
                 Pair(
                     row[AboutUsTable.content],
@@ -237,7 +216,7 @@ class DatabaseMigrationService(
     private suspend fun migrateProductsApproved(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             ProductsApproved.selectAll().map { row ->
                 row.toApprovedProduct()
             }
@@ -272,7 +251,7 @@ class DatabaseMigrationService(
     private suspend fun migrateProductsUnapproved(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             ProductsUnapproved.selectAll().map { row ->
                 row.toUnapprovedProduct()
             }
@@ -307,7 +286,7 @@ class DatabaseMigrationService(
     private suspend fun migrateProductImages(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             ProductImages.selectAll().map { row ->
                 Triple(
                     row[ProductImages.productId],
@@ -336,7 +315,7 @@ class DatabaseMigrationService(
     private suspend fun migrateOrders(): Int = withContext(Dispatchers.IO) {
         var count = 0
 
-        val sourceData = newSuspendedTransaction(db = sourceDb) {
+        val sourceData = newSuspendedTransaction {
             Orders.selectAll().map { row ->
                 Order.fromRow(row)
             }
@@ -370,8 +349,8 @@ class DatabaseMigrationService(
         val verification = MigrationVerification()
 
         try {
-            // Count records in source
-            val sourceCounts = newSuspendedTransaction(db = sourceDb) {
+            // Count records in source (using default database connection)
+            val sourceCounts = newSuspendedTransaction {
                 mapOf(
                     "admin_users" to AdminUsers.selectAll().count(),
                     "categories" to Categories.selectAll().count(),

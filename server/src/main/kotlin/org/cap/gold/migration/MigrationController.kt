@@ -51,25 +51,16 @@ fun Route.migrationRoutes() {
                     return@post
                 }
 
-                // Get current database connection from application
-                val currentConfig = call.application.environment.config
-                val sourceUrl = currentConfig.property("database.jdbcURL").getString()
-                val sourceUser = currentConfig.propertyOrNull("database.user")?.getString() ?: "postgres"
-                val sourcePassword = currentConfig.propertyOrNull("database.password")?.getString() ?: ""
-
                 if (request.dryRun) {
                     call.respond(HttpStatusCode.OK, MigrationResponse(
                         success = true,
-                        message = "Dry run - would migrate from $sourceUrl to ${request.targetUrl}"
+                        message = "Dry run - would migrate from current database to ${request.targetUrl}"
                     ))
                     return@post
                 }
 
-                // Run migration
+                // Run migration using current database connection
                 val migrationService = DatabaseMigrationService(
-                    sourceUrl = sourceUrl,
-                    sourceUser = sourceUser,
-                    sourcePassword = sourcePassword,
                     targetUrl = request.targetUrl,
                     targetUser = request.targetUser,
                     targetPassword = request.targetPassword
@@ -108,15 +99,7 @@ fun Route.migrationRoutes() {
             try {
                 val request = call.receive<MigrationRequest>()
 
-                val currentConfig = call.application.environment.config
-                val sourceUrl = currentConfig.property("database.jdbcURL").getString()
-                val sourceUser = currentConfig.propertyOrNull("database.user")?.getString() ?: "postgres"
-                val sourcePassword = currentConfig.propertyOrNull("database.password")?.getString() ?: ""
-
                 val migrationService = DatabaseMigrationService(
-                    sourceUrl = sourceUrl,
-                    sourceUser = sourceUser,
-                    sourcePassword = sourcePassword,
                     targetUrl = request.targetUrl,
                     targetUser = request.targetUser,
                     targetPassword = request.targetPassword

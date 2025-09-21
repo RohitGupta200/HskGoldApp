@@ -53,9 +53,6 @@ object MigrationRunner {
                 println("Target: ${maskUrl(targetUrl!!)}")
 
                 val migrationService = DatabaseMigrationService(
-                    sourceUrl = sourceUrl,
-                    sourceUser = sourceUser!!,
-                    sourcePassword = sourcePassword!!,
                     targetUrl = targetUrl,
                     targetUser = targetUser!!,
                     targetPassword = targetPassword!!
@@ -138,9 +135,6 @@ class InteractiveMigrationRunner {
 
         try {
             val migrationService = DatabaseMigrationService(
-                sourceUrl = sourceUrl,
-                sourceUser = sourceUser,
-                sourcePassword = sourcePassword,
                 targetUrl = targetUrl,
                 targetUser = targetUser,
                 targetPassword = targetPassword

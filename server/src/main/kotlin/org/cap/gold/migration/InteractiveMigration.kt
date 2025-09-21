@@ -52,9 +52,6 @@ fun main() = runBlocking {
         println("🚀 Starting migration...")
 
         val migrationService = DatabaseMigrationService(
-            sourceUrl = sourceUrl,
-            sourceUser = sourceUser,
-            sourcePassword = sourcePassword,
             targetUrl = targetUrl,
             targetUser = "postgres",
             targetPassword = targetPassword
