@@ -47,11 +47,66 @@ class DatabaseMigrationService(
     }
 
     private fun normalizeJdbcUrl(url: String): String {
-        return when {
-            url.startsWith("jdbc:postgresql://") -> url
+        // If already a JDBC URL, fix port if missing
+        if (url.startsWith("jdbc:postgresql://")) {
+            return addPortIfMissing(url)
+        }
+
+        // Convert postgresql:// or postgres:// to jdbc:postgresql://
+        val jdbcUrl = when {
             url.startsWith("postgresql://") -> url.replace("postgresql://", "jdbc:postgresql://")
             url.startsWith("postgres://") -> url.replace("postgres://", "jdbc:postgresql://")
             else -> url
+        }
+
+        return addPortIfMissing(jdbcUrl)
+    }
+
+    private fun addPortIfMissing(jdbcUrl: String): String {
+        if (!jdbcUrl.startsWith("jdbc:postgresql://")) {
+            return jdbcUrl
+        }
+
+        try {
+            // Extract the part after jdbc:postgresql://
+            val urlPart = jdbcUrl.substring("jdbc:postgresql://".length)
+
+            // Check if it already has a port
+            if (urlPart.contains(":") && urlPart.indexOf(":") < urlPart.indexOf("/")) {
+                return jdbcUrl // Port already present
+            }
+
+            // Split by @ to handle user:password@host/database format
+            val parts = urlPart.split("@")
+            if (parts.size == 2) {
+                val credentials = parts[0]
+                val hostAndDb = parts[1]
+
+                // Add port 5432 before the database name
+                val dbIndex = hostAndDb.indexOf("/")
+                if (dbIndex > 0) {
+                    val host = hostAndDb.substring(0, dbIndex)
+                    val database = hostAndDb.substring(dbIndex)
+                    return "jdbc:postgresql://$credentials@$host:5432$database"
+                } else {
+                    // No database specified, add port at the end
+                    return "jdbc:postgresql://$credentials@$hostAndDb:5432"
+                }
+            } else {
+                // No credentials, just host/database
+                val dbIndex = urlPart.indexOf("/")
+                if (dbIndex > 0) {
+                    val host = urlPart.substring(0, dbIndex)
+                    val database = urlPart.substring(dbIndex)
+                    return "jdbc:postgresql://$host:5432$database"
+                } else {
+                    // No database specified
+                    return "jdbc:postgresql://$urlPart:5432"
+                }
+            }
+        } catch (e: Exception) {
+            println("Warning: Could not parse JDBC URL: $jdbcUrl, using as-is")
+            return jdbcUrl
         }
     }
 
