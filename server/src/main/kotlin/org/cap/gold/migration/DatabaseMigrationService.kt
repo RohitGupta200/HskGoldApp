@@ -34,7 +34,7 @@ class DatabaseMigrationService(
     private fun createDatabase(url: String, user: String, password: String, name: String): Database {
         val config = HikariConfig().apply {
             driverClassName = "org.postgresql.Driver"
-            jdbcUrl = url
+            jdbcUrl = normalizeJdbcUrl(url)
             username = user
             this.password = password
             maximumPoolSize = 5
@@ -44,6 +44,15 @@ class DatabaseMigrationService(
 
         val dataSource = HikariDataSource(config)
         return Database.connect(dataSource)
+    }
+
+    private fun normalizeJdbcUrl(url: String): String {
+        return when {
+            url.startsWith("jdbc:postgresql://") -> url
+            url.startsWith("postgresql://") -> url.replace("postgresql://", "jdbc:postgresql://")
+            url.startsWith("postgres://") -> url.replace("postgres://", "jdbc:postgresql://")
+            else -> url
+        }
     }
 
     private fun createTargetSchema() {
