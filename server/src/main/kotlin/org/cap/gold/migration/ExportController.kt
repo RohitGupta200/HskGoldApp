@@ -203,6 +203,131 @@ fun Route.exportRoutes() {
             }
         }
 
+        // Export table schemas (CREATE statements)
+        get("/schema") {
+            try {
+                val schemaDump = StringBuilder()
+
+                schemaDump.append("-- CapGold Database Schema Export\n")
+                schemaDump.append("-- Generated: ${LocalDateTime.now()}\n\n")
+
+                // Admin Users table
+                schemaDump.append("""
+-- Admin Users Table
+CREATE TABLE IF NOT EXISTS "Admin_users" (
+    "userId" VARCHAR(255) PRIMARY KEY,
+    "Fire_device_token" VARCHAR(255),
+    "deviceType" VARCHAR(16) DEFAULT 'android'
+);
+
+""")
+
+                // Categories table
+                schemaDump.append("""
+-- Categories Table
+CREATE TABLE IF NOT EXISTS "categories" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" VARCHAR(255) NOT NULL
+);
+
+""")
+
+                // About Us table
+                schemaDump.append("""
+-- About Us Table
+CREATE TABLE IF NOT EXISTS "about_us" (
+    "content" TEXT NOT NULL,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+""")
+
+                // Products Approved table
+                schemaDump.append("""
+-- Products Approved Table
+CREATE TABLE IF NOT EXISTS "products_approved" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" VARCHAR(200) NOT NULL,
+    "description" VARCHAR(1000) NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "weight" VARCHAR(50) NOT NULL,
+    "dimension" VARCHAR(255) NOT NULL,
+    "purity" VARCHAR(255) NOT NULL,
+    "max_quantity" INTEGER NOT NULL,
+    "category" VARCHAR(255) NOT NULL,
+    "margin" DECIMAL(10,2) NOT NULL,
+    "multiplier" DECIMAL(10,2) NOT NULL,
+    "custom_fields" TEXT NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+""")
+
+                // Products Unapproved table
+                schemaDump.append("""
+-- Products Unapproved Table
+CREATE TABLE IF NOT EXISTS "products_unapproved" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" VARCHAR(200) NOT NULL,
+    "description" VARCHAR(1000) NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "weight" VARCHAR(50) NOT NULL,
+    "dimension" VARCHAR(255) NOT NULL,
+    "purity" VARCHAR(255) NOT NULL,
+    "max_quantity" INTEGER NOT NULL,
+    "category" VARCHAR(255) NOT NULL,
+    "margin" DECIMAL(10,2) NOT NULL,
+    "multiplier" DECIMAL(10,2) NOT NULL,
+    "custom_fields" TEXT NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+""")
+
+                // Product Images table
+                schemaDump.append("""
+-- Product Images Table
+CREATE TABLE IF NOT EXISTS "product_images" (
+    "product_id" UUID NOT NULL,
+    "image" BYTEA NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+""")
+
+                // Orders table
+                schemaDump.append("""
+-- Orders Table
+CREATE TABLE IF NOT EXISTS "orders" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "product_id" UUID NOT NULL,
+    "product_name" VARCHAR(255) NOT NULL,
+    "product_price" DECIMAL(10,2) NOT NULL,
+    "product_weight" DECIMAL(10,2) NOT NULL,
+    "product_dimensions" VARCHAR(255) NOT NULL,
+    "status" VARCHAR(50) NOT NULL,
+    "created_at" BIGINT NOT NULL,
+    "product_quantity" INTEGER NOT NULL,
+    "user_mobile" VARCHAR(20) NOT NULL,
+    "user_name" VARCHAR(255) NOT NULL,
+    "total_amount" DECIMAL(10,2) NOT NULL
+);
+
+""")
+
+                call.respondText(schemaDump.toString(), ContentType.Text.Plain)
+
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf(
+                    "error" to e.message,
+                    "message" to "Schema export failed"
+                ))
+            }
+        }
+
         // Export as SQL dump for direct Supabase import
         get("/sql") {
             try {
