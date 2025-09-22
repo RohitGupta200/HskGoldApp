@@ -29,14 +29,19 @@ class DatabaseMigrationService(
     }
 
     private fun createDatabase(url: String, user: String, password: String, name: String): Database {
-        val normalizedUrl = normalizeJdbcUrl(url)
-        println("Connecting to $name database: ${maskCredentials(normalizedUrl)}")
+        val (jdbcUrl, extractedUser, extractedPassword) = parsePostgreSQLUrl(url)
+
+        // Use extracted credentials if available, otherwise use provided ones
+        val finalUser = if (extractedUser.isNotBlank()) extractedUser else user
+        val finalPassword = if (extractedPassword.isNotBlank()) extractedPassword else password
+
+        println("Connecting to $name database: $jdbcUrl (user: $finalUser)")
 
         val config = HikariConfig().apply {
             driverClassName = "org.postgresql.Driver"
-            jdbcUrl = normalizedUrl
-            username = user
-            this.password = password
+            this.jdbcUrl = jdbcUrl
+            username = finalUser
+            this.password = finalPassword
             maximumPoolSize = 3
             minimumIdle = 1
             connectionTimeout = 60000  // 60 seconds
@@ -71,57 +76,47 @@ class DatabaseMigrationService(
         }
     }
 
-    private fun maskCredentials(url: String): String {
-        return url.replace(Regex("://([^:]+):([^@]+)@"), "://$1:****@")
-    }
+    private fun parsePostgreSQLUrl(url: String): Triple<String, String, String> {
+        try {
+            if (url.startsWith("jdbc:postgresql://")) {
+                // Already a JDBC URL, add SSL if needed
+                val finalUrl = if (url.contains("sslmode=")) url else "$url?sslmode=require"
+                return Triple(finalUrl, "", "")
+            }
 
-    // Debug function to test URL normalization
-    fun testUrlNormalization(url: String): String {
-        return normalizeJdbcUrl(url)
-    }
-
-    private fun normalizeJdbcUrl(url: String): String {
-        // Use the same proven logic from DatabaseFactory
-        // Add SSL for external connections (like Supabase)
-        return normalizeJdbcUrlWithSSL(url, "require")
-    }
-
-    // Fixed URL normalization that properly handles credentials
-    private fun normalizeJdbcUrlWithSSL(url: String, sslMode: String?): String {
-        if (url.startsWith("jdbc:")) return applySslModeIfProvided(url, sslMode)
-
-        if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
-            val normalized = if (url.startsWith("postgres://")) url.replaceFirst("postgres://", "postgresql://") else url
-
-            try {
-                // Manual parsing for PostgreSQL URLs with credentials
+            if (url.startsWith("postgres://") || url.startsWith("postgresql://")) {
+                val normalized = if (url.startsWith("postgres://")) url.replaceFirst("postgres://", "postgresql://") else url
                 val withoutProtocol = normalized.substring("postgresql://".length)
 
                 val atIndex = withoutProtocol.indexOf('@')
                 if (atIndex == -1) {
-                    // No credentials, simple case
+                    // No credentials in URL
                     val uri = java.net.URI(normalized)
                     val host = uri.host
                     val port = if (uri.port == -1) 5432 else uri.port
                     val database = uri.path.trimStart('/')
-                    val query = uri.rawQuery ?: ""
-                    val jdbcBase = "jdbc:postgresql://$host:$port/$database"
-                    val finalQuery = if (sslMode.isNullOrBlank()) query else ensureOrOverrideSslInQuery(query, sslMode)
-                    return if (finalQuery.isBlank()) jdbcBase else "$jdbcBase?$finalQuery"
+                    val jdbcUrl = "jdbc:postgresql://$host:$port/$database?sslmode=require"
+                    return Triple(jdbcUrl, "", "")
                 } else {
-                    // Has credentials, parse manually
+                    // Has credentials
                     val credentials = withoutProtocol.substring(0, atIndex)
                     val hostAndPath = withoutProtocol.substring(atIndex + 1)
 
+                    // Parse credentials
+                    val colonIndex = credentials.indexOf(':')
+                    val username = if (colonIndex != -1) credentials.substring(0, colonIndex) else credentials
+                    val password = if (colonIndex != -1) credentials.substring(colonIndex + 1) else ""
+
+                    // Parse host and database
                     val slashIndex = hostAndPath.indexOf('/')
                     val questionIndex = hostAndPath.indexOf('?')
 
                     val hostPart = if (slashIndex != -1) hostAndPath.substring(0, slashIndex) else
                                   if (questionIndex != -1) hostAndPath.substring(0, questionIndex) else hostAndPath
 
-                    val colonIndex = hostPart.lastIndexOf(':')
-                    val host = if (colonIndex != -1) hostPart.substring(0, colonIndex) else hostPart
-                    val port = if (colonIndex != -1) hostPart.substring(colonIndex + 1).toIntOrNull() ?: 5432 else 5432
+                    val colonIndex2 = hostPart.lastIndexOf(':')
+                    val host = if (colonIndex2 != -1) hostPart.substring(0, colonIndex2) else hostPart
+                    val port = if (colonIndex2 != -1) hostPart.substring(colonIndex2 + 1).toIntOrNull() ?: 5432 else 5432
 
                     val database = if (slashIndex != -1) {
                         val pathPart = hostAndPath.substring(slashIndex + 1)
@@ -129,46 +124,30 @@ class DatabaseMigrationService(
                         if (queryStart != -1) pathPart.substring(0, queryStart) else pathPart
                     } else "postgres"
 
-                    val query = if (questionIndex != -1) hostAndPath.substring(questionIndex + 1) else ""
-
-                    val jdbcBase = "jdbc:postgresql://$credentials@$host:$port/$database"
-                    val finalQuery = if (sslMode.isNullOrBlank()) query else ensureOrOverrideSslInQuery(query, sslMode)
-                    return if (finalQuery.isBlank()) jdbcBase else "$jdbcBase?$finalQuery"
+                    val jdbcUrl = "jdbc:postgresql://$host:$port/$database?sslmode=require"
+                    return Triple(jdbcUrl, username, password)
                 }
-            } catch (e: Exception) {
-                println("Warning: Failed to parse PostgreSQL URL, trying simple conversion: ${e.message}")
-                // Fallback: simple replacement
-                val jdbcUrl = normalized.replace("postgresql://", "jdbc:postgresql://")
-                val finalQuery = if (sslMode.isNullOrBlank()) "" else "sslmode=$sslMode"
-                return if (finalQuery.isBlank()) jdbcUrl else "$jdbcUrl?$finalQuery"
             }
+
+            throw IllegalArgumentException("Unsupported URL format: $url")
+        } catch (e: Exception) {
+            println("Warning: Failed to parse PostgreSQL URL: ${e.message}")
+            // Fallback
+            val fallbackUrl = if (url.startsWith("jdbc:")) url else "jdbc:postgresql://localhost:5432/postgres"
+            return Triple(fallbackUrl, "", "")
         }
-        return applySslModeIfProvided(url, sslMode)
     }
 
-    private fun applySslModeIfProvided(jdbcUrl: String, sslMode: String?): String {
-        if (sslMode.isNullOrBlank()) return jdbcUrl
-        val parts = jdbcUrl.split("?", limit = 2)
-        val base = parts[0]
-        val query = if (parts.size > 1) parts[1] else ""
-        val finalQuery = ensureOrOverrideSslInQuery(query, sslMode)
-        return if (finalQuery.isBlank()) base else "$base?$finalQuery"
+    private fun maskCredentials(url: String): String {
+        return url.replace(Regex("://([^:]+):([^@]+)@"), "://$1:****@")
     }
 
-    private fun ensureOrOverrideSslInQuery(query: String, sslMode: String): String {
-        if (query.isBlank()) return "sslmode=$sslMode"
-        val params = query.split('&').toMutableList()
-        var found = false
-        for (i in params.indices) {
-            if (params[i].startsWith("sslmode=")) {
-                params[i] = "sslmode=$sslMode"
-                found = true
-                break
-            }
-        }
-        if (!found) params.add("sslmode=$sslMode")
-        return params.joinToString("&")
+    // Debug function to test URL normalization
+    fun testUrlNormalization(url: String): String {
+        val (jdbcUrl, username, password) = parsePostgreSQLUrl(url)
+        return "JDBC URL: $jdbcUrl, User: $username, Password: ${if (password.isNotBlank()) "***" else "not provided"}"
     }
+
 
     private fun createTargetSchema() {
         transaction(targetDb) {
