@@ -8,7 +8,6 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import org.cap.gold.config.DatabaseFactory
 
 @Serializable
 data class MigrationRequest(
@@ -35,6 +34,32 @@ fun Route.migrationRoutes() {
                 "status" to "Migration tool ready",
                 "message" to "Use POST /admin/migration/start to begin migration"
             ))
+        }
+
+        // Debug endpoint to test URL parsing
+        post("/test-url") {
+            try {
+                val request = call.receive<MigrationRequest>()
+                val migrationService = DatabaseMigrationService(
+                    targetUrl = request.targetUrl,
+                    targetUser = request.targetUser,
+                    targetPassword = request.targetPassword
+                )
+
+                // Test URL normalization without actually connecting
+                val testResult = migrationService.testUrlNormalization(request.targetUrl)
+
+                call.respond(HttpStatusCode.OK, mapOf(
+                    "original_url" to request.targetUrl,
+                    "normalized_url" to testResult,
+                    "message" to "URL parsing test completed"
+                ))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf(
+                    "error" to e.message,
+                    "message" to "URL parsing test failed"
+                ))
+            }
         }
 
         // POST endpoint to start migration
