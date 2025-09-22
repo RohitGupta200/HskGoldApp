@@ -62,6 +62,70 @@ fun Route.migrationRoutes() {
             }
         }
 
+        // Network connectivity test endpoint
+        post("/test-network") {
+            try {
+                val request = call.receive<MigrationRequest>()
+
+                // Parse URL to get host and port
+                val (jdbcUrl, username, password) = try {
+                    val migrationService = DatabaseMigrationService(
+                        targetUrl = request.targetUrl,
+                        targetUser = request.targetUser,
+                        targetPassword = request.targetPassword
+                    )
+                    val urlInfo = request.targetUrl
+                    val withoutProtocol = if (urlInfo.startsWith("postgresql://")) urlInfo.substring("postgresql://".length) else urlInfo
+                    val atIndex = withoutProtocol.indexOf('@')
+                    val hostAndPath = if (atIndex != -1) withoutProtocol.substring(atIndex + 1) else withoutProtocol
+                    val slashIndex = hostAndPath.indexOf('/')
+                    val hostPart = if (slashIndex != -1) hostAndPath.substring(0, slashIndex) else hostAndPath
+                    val colonIndex = hostPart.lastIndexOf(':')
+                    val host = if (colonIndex != -1) hostPart.substring(0, colonIndex) else hostPart
+                    val port = if (colonIndex != -1) hostPart.substring(colonIndex + 1).toIntOrNull() ?: 5432 else 5432
+
+                    Triple(host, port, "parsed successfully")
+                } catch (e: Exception) {
+                    Triple("unknown", 0, "parsing failed: ${e.message}")
+                }
+
+                val host = jdbcUrl
+                val port = try { username.toInt() } catch (e: Exception) { 5432 }
+
+                // Test network connectivity
+                val networkTest = try {
+                    java.net.Socket().use { socket ->
+                        socket.connect(java.net.InetSocketAddress(host, port), 10000)
+                        "✅ Network connection successful to $host:$port"
+                    }
+                } catch (e: java.net.ConnectException) {
+                    "❌ Connection refused to $host:$port - ${e.message}"
+                } catch (e: java.net.SocketTimeoutException) {
+                    "❌ Connection timeout to $host:$port - ${e.message}"
+                } catch (e: java.net.UnknownHostException) {
+                    "❌ Unknown host: $host - ${e.message}"
+                } catch (e: java.net.SocketException) {
+                    "❌ Network error to $host:$port - ${e.message}"
+                } catch (e: Exception) {
+                    "❌ Network test failed: ${e.message}"
+                }
+
+                call.respond(HttpStatusCode.OK, mapOf(
+                    "host" to host,
+                    "port" to port,
+                    "network_test" to networkTest,
+                    "url_parsing" to password,
+                    "message" to "Network connectivity test completed"
+                ))
+
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf(
+                    "error" to e.message,
+                    "message" to "Network test failed"
+                ))
+            }
+        }
+
         // POST endpoint to start migration
         post("/start") {
             try {
