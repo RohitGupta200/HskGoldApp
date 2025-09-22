@@ -8,6 +8,8 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import java.sql.DriverManager
+import java.sql.SQLException
 
 @Serializable
 data class MigrationRequest(
@@ -58,6 +60,75 @@ fun Route.migrationRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, mapOf(
                     "error" to e.message,
                     "message" to "URL parsing test failed"
+                ))
+            }
+        }
+
+        // Direct JDBC connection validation
+        post("/validate-connection") {
+            try {
+                val request = call.receive<MigrationRequest>()
+
+                // Parse and normalize the URL
+                val originalUrl = request.targetUrl
+                val normalizedUrl = when {
+                    originalUrl.startsWith("postgresql://") -> {
+                        // Convert postgresql:// to jdbc:postgresql://
+                        val withoutProtocol = originalUrl.substring("postgresql://".length)
+                        val atIndex = withoutProtocol.indexOf('@')
+                        if (atIndex != -1) {
+                            val credentials = withoutProtocol.substring(0, atIndex)
+                            val hostAndPath = withoutProtocol.substring(atIndex + 1)
+                            val colonIndex = credentials.indexOf(':')
+                            val username = if (colonIndex != -1) credentials.substring(0, colonIndex) else credentials
+                            val password = if (colonIndex != -1) credentials.substring(colonIndex + 1) else ""
+
+                            // Add port if missing
+                            val portAddedUrl = if (!hostAndPath.contains(":")) {
+                                val slashIndex = hostAndPath.indexOf('/')
+                                if (slashIndex != -1) {
+                                    hostAndPath.substring(0, slashIndex) + ":5432" + hostAndPath.substring(slashIndex)
+                                } else {
+                                    "$hostAndPath:5432"
+                                }
+                            } else hostAndPath
+
+                            "jdbc:postgresql://$portAddedUrl?sslmode=require&user=$username&password=$password"
+                        } else {
+                            "jdbc:postgresql://$withoutProtocol?sslmode=require"
+                        }
+                    }
+                    originalUrl.startsWith("jdbc:postgresql://") -> "$originalUrl?sslmode=require"
+                    else -> "jdbc:postgresql://$originalUrl?sslmode=require"
+                }
+
+                // Test direct JDBC connection
+                val connectionTest = try {
+                    DriverManager.getConnection(normalizedUrl).use { connection ->
+                        if (connection.isValid(10)) {
+                            val metadata = connection.metaData
+                            "✅ JDBC Connection successful! Database: ${metadata.databaseProductName} ${metadata.databaseProductVersion}"
+                        } else {
+                            "❌ Connection invalid"
+                        }
+                    }
+                } catch (e: SQLException) {
+                    "❌ SQL Error: ${e.message} (SQLState: ${e.sqlState}, ErrorCode: ${e.errorCode})"
+                } catch (e: Exception) {
+                    "❌ Connection failed: ${e.message}"
+                }
+
+                call.respond(HttpStatusCode.OK, mapOf(
+                    "original_url" to originalUrl,
+                    "normalized_url" to normalizedUrl,
+                    "connection_test" to connectionTest,
+                    "message" to "Direct JDBC connection validation completed"
+                ))
+
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf(
+                    "error" to e.message,
+                    "message" to "Connection validation failed"
                 ))
             }
         }
