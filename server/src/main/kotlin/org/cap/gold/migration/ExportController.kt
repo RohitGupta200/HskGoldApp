@@ -386,6 +386,17 @@ CREATE TABLE IF NOT EXISTS "orders" (
                         sqlDump.append("('$id', '$name', '$description', ${row[ProductsApproved.price]}, '${row[ProductsApproved.weight]}', '${row[ProductsApproved.dimension]}', '${row[ProductsApproved.purity]}', ${row[ProductsApproved.maxQuantity]}, '${row[ProductsApproved.category]}', ${row[ProductsApproved.margin]}, ${row[ProductsApproved.multiplier]}, '$customFields', '${row[ProductsApproved.createdAt]}', '${row[ProductsApproved.updatedAt]}');\n")
                     }
 
+                    sqlDump.append("\n-- Products UnApproved\n")
+                    ProductsUnapproved.selectAll().forEach { row ->
+                        val id = row[ProductsUnapproved.id].value.toString()
+                        val name = row[ProductsUnapproved.name].replace("'", "''")
+                        val description = row[ProductsUnapproved.description].replace("'", "''")
+                        val customFields = row[ProductsUnapproved.customFields].replace("'", "''")
+
+                        sqlDump.append("INSERT INTO \"products_unapproved\" (\"id\", \"name\", \"description\", \"price\", \"weight\", \"dimension\", \"purity\", \"max_quantity\", \"category\", \"margin\", \"multiplier\", \"custom_fields\", \"created_at\", \"updated_at\") VALUES ")
+                        sqlDump.append("('$id', '$name', '$description', ${row[ProductsUnapproved.price]}, '${row[ProductsUnapproved.weight]}', '${row[ProductsUnapproved.dimension]}', '${row[ProductsUnapproved.purity]}', ${row[ProductsUnapproved.maxQuantity]}, '${row[ProductsUnapproved.category]}', ${row[ProductsUnapproved.margin]}, ${row[ProductsUnapproved.multiplier]}, '$customFields', '${row[ProductsUnapproved.createdAt]}', '${row[ProductsUnapproved.updatedAt]}');\n")
+                    }
+
                     // Export Orders
                     sqlDump.append("\n-- Orders\n")
                     Orders.selectAll().forEach { row ->
