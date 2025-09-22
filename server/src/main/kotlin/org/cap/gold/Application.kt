@@ -38,6 +38,7 @@ import org.cap.gold.controllers.CategoryController
 import org.cap.gold.controllers.OrderController
 import org.cap.gold.dao.OrderDao
 import org.cap.gold.migration.migrationRoutes
+import org.cap.gold.migration.exportRoutes
 import org.cap.gold.exceptions.*
 import org.cap.gold.models.CreateOrderRequest
 import org.cap.gold.models.Order
@@ -277,6 +278,9 @@ private fun Application.configureRouting(authController: AuthController) {
 
             // Migration routes (admin only)
             migrationRoutes()
+
+            // Export routes (admin only)
+            exportRoutes()
         }
     }
 }
