@@ -48,8 +48,8 @@ class ProfileServiceImpl(
             setBody(ChangePasswordRequest(currentPassword = currentPassword, newPassword = newPassword))
         }
         if (resp.status.value !in 200..299) {
-            val msg = try { resp.bodyAsText() } catch (_: Exception) { "Password change failed" }
-            throw IllegalStateException(msg.ifBlank { "Password change failed" })
+            val msg = try { resp.body<ErrorResponseNetwork>()?.message  } catch (_: Exception) { "Password change failed" }
+            throw IllegalStateException(msg?.ifBlank { "Password change failed" })
         }
     }
 
@@ -59,12 +59,18 @@ class ProfileServiceImpl(
             setBody(UpdateMeRequest(phoneNumber = newPhone,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
-            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Phone change failed" }
-            throw IllegalStateException(msg.ifBlank { "Phone change failed" })
+            val msg = try { httpResp.body<ErrorResponseNetwork>()?.message  } catch (_: Exception) { "Phone change failed" }
+            throw IllegalStateException(msg?.ifBlank { "Phone change failed" })
         }
         // Refresh and return canonical user
         return getMe()
     }
+    @kotlinx.serialization.Serializable
+    data class ErrorResponseNetwork(
+        val error: String,
+        val message: String? = null,
+        val status: Int? = null
+    )
 
     override suspend fun changeEmail(newEmail: String,password: String): User {
         val httpResp: HttpResponse = network.client.put("$baseUrl/api/auth/me") {
@@ -72,8 +78,8 @@ class ProfileServiceImpl(
             setBody(UpdateMeRequest(shopName = newEmail,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
-            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Shop change failed" }
-            throw IllegalStateException(msg.ifBlank { "Shop change failed" })
+            val msg = try { httpResp.body<ErrorResponseNetwork>()?.message } catch (_: Exception) { "Shop change failed" }
+            throw IllegalStateException(msg?.ifBlank { "Shop change failed" })
         }
         return getMe()
     }
@@ -84,8 +90,8 @@ class ProfileServiceImpl(
             setBody(UpdateMeRequest(displayName = newName,currentPassword = password))
         }
         if (httpResp.status.value !in 200..299) {
-            val msg = try { httpResp.bodyAsText() } catch (_: Exception) { "Name change failed" }
-            throw IllegalStateException(msg.ifBlank { "Name change failed" })
+            val msg = try { httpResp.body<ErrorResponseNetwork>()?.message  } catch (_: Exception) { "Name change failed" }
+            throw IllegalStateException(msg?.ifBlank { "Name change failed" })
         }
         return getMe()
     }

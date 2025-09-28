@@ -165,11 +165,6 @@ class ProductDetailViewModel(
                     setFieldsFromJson(fieldsJson)
                     p
                 }
-                // Debug: log image info received from API
-                runCatching {
-                    val len = product?.imageBase64?.length ?: 0
-                    println("DEBUG ProductDetail.loadProduct: id=$productId base64Len=$len imageUrl='${product?.imageUrl}' isAdmin=$isAdmin isApprovedUser=$isApprovedUser")
-                }
                 
                 if (product == null) {
                     error = "Product not found"
