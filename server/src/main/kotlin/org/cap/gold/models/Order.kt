@@ -34,7 +34,7 @@ data class OrderSearchParams(
 
 // Order table
 object Orders : UUIDTable("orders") {
-    val productId = uuid("product_id").references(ProductsApproved.id, onDelete = ReferenceOption.CASCADE)
+    val productId = uuid("product_id").references(ProductsApproved.id, onDelete = ReferenceOption.RESTRICT)
     val productName = varchar("product_name", 255)
     val productPrice = double("product_price")
     val productWeight = double("product_weight")

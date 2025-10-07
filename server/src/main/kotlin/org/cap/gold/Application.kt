@@ -391,6 +391,31 @@ fun Application.module() {
             ALTER TABLE Admin_users ADD COLUMN IF NOT EXISTS deviceType VARCHAR(16) DEFAULT 'android';
             """.trimIndent()
         )
+
+        // 5) Change Orders foreign key constraint from CASCADE to RESTRICT
+        // This prevents orders from being automatically deleted when a product is deleted
+        exec(
+            """
+            DO $$
+            BEGIN
+                -- Check if the constraint exists and needs to be updated
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints
+                    WHERE constraint_name = 'orders_product_id_fkey'
+                    AND table_name = 'orders'
+                ) THEN
+                    -- Drop the existing constraint
+                    ALTER TABLE orders DROP CONSTRAINT orders_product_id_fkey;
+                    -- Add the new constraint with RESTRICT
+                    ALTER TABLE orders
+                    ADD CONSTRAINT orders_product_id_fkey
+                    FOREIGN KEY (product_id)
+                    REFERENCES products_approved(id)
+                    ON DELETE RESTRICT;
+                END IF;
+            END $$;
+            """.trimIndent()
+        )
     }
     
     // Configure Koin for dependency injection
