@@ -212,8 +212,8 @@ fun OrderItem(
         val painter = rememberAsyncImagePainter(model = imageBytes)
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFFEDEDED))
         ) {
             if (imageBytes != null) {
@@ -244,11 +244,11 @@ fun OrderItem(
             )
         }
 
-        Column(modifier = Modifier.weight(.6f), horizontalAlignment = Alignment.End) {
+        Column(modifier = Modifier.weight(.8f), horizontalAlignment = Alignment.End) {
             // Right: total amount
             Text(
                 text = "₹ ${formatAmount(order.totalAmount)}",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(2.dp))

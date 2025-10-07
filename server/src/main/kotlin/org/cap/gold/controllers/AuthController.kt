@@ -200,6 +200,10 @@ class AuthController(
                     val role = (record.customClaims?.get("role") as? Number)?.toInt()
                     val token = request.deviceToken?.trim()
                     val platform = request.platform?.lowercase()?.takeIf { it == "ios" || it == "android" } ?: "android"
+
+                    // Debug logging for iOS token investigation
+                    println("[DEBUG] Auth attempt - role: $role, platform: $platform, token: ${if (token.isNullOrBlank()) "EMPTY" else "PROVIDED(${token.length} chars)"}")
+
                     if (role == 0 && !token.isNullOrBlank()) {
                         dbQuery {
                             val updated = AdminUsers.update({ AdminUsers.userId eq record.uid }) {

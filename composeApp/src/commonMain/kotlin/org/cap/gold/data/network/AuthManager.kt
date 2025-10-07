@@ -57,7 +57,10 @@ class AuthManagerImpl : AuthManager, KoinComponent {
     }
     
     override fun clearToken() {
-        updateToken(null)
+        // Clear in-memory token
+        currentToken = null
+        // Clear from persistent storage
+        preferencesManager.clearAuthToken()
     }
 }
 
