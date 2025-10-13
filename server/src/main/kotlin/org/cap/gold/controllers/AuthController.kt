@@ -158,6 +158,37 @@ class AuthController(
             // Placeholder Firebase Web API Key (required later for Identity Toolkit signInWithPassword)
             val firebaseWebApiKey: String? = System.getenv("FIREBASE_WEB_API_KEY")
 
+            /*post("/password/changeper"){
+                // Get current user ID from the token
+                val request = call.receive<UpdateUserRequest>()
+
+
+
+
+                request.phoneNumber?.let {
+                    val userId = firebaseAuth.getUserByPhoneNumber(it).uid
+
+                    val updatedUser = userRepository.updateUser(
+                        userId,
+                        mapOf("password" to request.currentPassword) as Map<String, Any>
+                    )
+                    call.respond(HttpStatusCode.OK, UserResponse.fromUser(updatedUser))
+                }
+
+
+
+
+
+
+
+                // In a real app, verify the current password before changing
+                // For demo, we'll just update the password
+
+
+
+
+            }*/
+
             // Sign in with email and password (placeholder verification until API key is configured)
             post("/signin/email") {
                 val request = try {
@@ -258,9 +289,9 @@ class AuthController(
                         return@get
                     }
 
-                    val userId = decoded.subject
+                    val user_Id = decoded.subject
                     // Fetch user from Firebase
-                    val record = firebaseAuth.getUser(userId)
+                    val record = firebaseAuth.getUser(user_Id)
                     val user = org.cap.gold.models.User(
                         id = record.uid,
                         phoneNumber = record.phoneNumber ?: "",
@@ -270,6 +301,33 @@ class AuthController(
                         emailVerified = record.isEmailVerified,
                         customClaims = record.customClaims ?: emptyMap()
                     )
+
+                    // Save device token for admins (role == 0) if provided
+                    val role = (record.customClaims?.get("role") as? Number)?.toInt()
+                    val deviceToken = call.request.queryParameters["deviceToken"]?.trim()
+                    val platform = call.request.queryParameters["platform"]?.lowercase()?.takeIf {
+                        it == "ios" || it == "android"
+                    } ?: "android"
+
+                    // Debug logging for device token investigation
+                    println("[DEBUG] /me request - role: $role, platform: $platform, token: ${if (deviceToken.isNullOrBlank()) "EMPTY" else "PROVIDED(${deviceToken.length} chars)"}")
+
+                    if (role == 0 && !deviceToken.isNullOrBlank()) {
+                        dbQuery {
+                            val updated = AdminUsers.update({ AdminUsers.userId eq record.uid }) {
+                                it[fireDeviceToken] = deviceToken
+                                it[deviceType] = platform
+                            }
+                            if (updated == 0) {
+                                AdminUsers.insert {
+                                    it[userId] = record.uid
+                                    it[fireDeviceToken] = deviceToken
+                                    it[deviceType] = platform
+                                }
+                            }
+                        }
+                        println("[DEBUG] /me: Saved device token for admin user ${record.uid}")
+                    }
 
                     // Optionally rotate tokens; for simplicity, issue fresh tokens
                     val newAccessToken = jwtConfig.generateAccessToken(userId = user.id, roles = emptyList())
