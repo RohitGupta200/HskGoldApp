@@ -289,9 +289,9 @@ class AuthController(
                         return@get
                     }
 
-                    val user_Id = decoded.subject
+                    val userId = decoded.subject
                     // Fetch user from Firebase
-                    val record = firebaseAuth.getUser(user_Id)
+                    val record = firebaseAuth.getUser(userId)
                     val user = org.cap.gold.models.User(
                         id = record.uid,
                         phoneNumber = record.phoneNumber ?: "",
@@ -320,7 +320,7 @@ class AuthController(
                             }
                             if (updated == 0) {
                                 AdminUsers.insert {
-                                    it[userId] = record.uid
+                                    it[AdminUsers.userId] = record.uid
                                     it[fireDeviceToken] = deviceToken
                                     it[deviceType] = platform
                                 }
