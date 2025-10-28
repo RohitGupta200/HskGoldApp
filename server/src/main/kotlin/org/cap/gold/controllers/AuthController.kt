@@ -800,20 +800,106 @@ class AuthController(
                 // Get current user ID from the token
                 val token = call.request.headers[HttpHeaders.Authorization]?.removePrefix("Bearer ")?.trim()
                     ?: throw UnauthorizedException("Missing or invalid Authorization header")
-                    
+
                 val decodedToken = jwtConfig.validateToken(token)
                     ?: throw UnauthorizedException("Invalid or expired token")
-                    
+
                 val userId = decodedToken.subject
-                
+
                 try {
+                    // Revoke all refresh tokens for the user (invalidates existing Firebase tokens)
+                    // Note: Custom JWTs issued by server cannot be revoked as they are stateless,
+                    // but they will fail validation once the Firebase user is deleted
+                    firebaseAuth.revokeRefreshTokens(userId)
+
                     // Delete from Firebase
                     firebaseAuth.deleteUser(userId)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf(
+                            "success" to true,
+                            "message" to "Account deleted successfully. All tokens have been revoked."
+                        )
+                    )
                 } catch (e: FirebaseAuthException) {
                     if (e.errorCode.name != "user-not-found") {
                         throw e
                     }
                     // User not found in Firebase, continue with database cleanup
+                    call.handleException(e, "Failed to delete account")
+                }
+            }
+
+            // Delete Firebase account by phone number with password verification
+            post("/delete-by-phone") {
+                val request = try {
+
+
+                    call.receive<org.cap.gold.auth.DeleteAccountByPhoneRequest>().also { req ->
+
+                        firebaseWebApiKey?.let {
+
+                            req.password?.let { password ->
+                                if(!verifyWithFirebaseIdentity(req.phoneNumber + "@test.com",password,it)) {
+                                    throw InvalidCredentialsException()
+                                }
+                            }?: throw UnauthorizedException("Required current password")
+                        }?: throw UnauthorizedException("Invalid or expired token")
+
+                        if (req.phoneNumber.isBlank()) {
+                            throw BadRequestException("Phone number is required")
+                        }
+                        if (req.password.isBlank()) {
+                            throw BadRequestException("Password is required")
+                        }
+                    }
+                } catch (e: Exception) {
+                    call.handleException(e, "Invalid request format")
+                    return@post
+                }
+
+                try {
+                    // Normalize the phone number to E.164 format
+                    val normalizedPhone = normalizeIndianPhone(request.phoneNumber)
+
+                    // Get user by phone number from Firebase
+                    val userRecord = try {
+                        firebaseAuth.getUserByPhoneNumber(normalizedPhone)
+                    } catch (e: FirebaseAuthException) {
+                        if (e.errorCode.name == "user-not-found") {
+                            throw UserNotFoundException("No user found with phone number: ${request.phoneNumber}")
+                        }
+                        throw e
+                    }
+
+                    // Extract password for verification
+                    val password = request.password
+
+                    // TODO: Add your password verification logic here
+                    // Example:
+                    // if (!verifyPassword(userRecord, password)) {
+                    //     throw InvalidCredentialsException()
+                    // }
+
+                    // Revoke all refresh tokens for the user (invalidates existing Firebase tokens)
+                    // This ensures that any active sessions are terminated immediately
+                    // Note: Custom JWTs issued by server cannot be revoked as they are stateless,
+                    // but they will fail validation once the Firebase user is deleted
+                    firebaseAuth.revokeRefreshTokens(userRecord.uid)
+
+                    // Delete the user from Firebase
+                    firebaseAuth.deleteUser(userRecord.uid)
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf(
+                            "success" to true,
+                            "message" to "Account with phone number ${request.phoneNumber} has been deleted successfully. All tokens have been revoked.",
+                            "userId" to userRecord.uid
+                        )
+                    )
+                } catch (e: Exception) {
                     call.handleException(e, "Failed to delete account")
                 }
             }

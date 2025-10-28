@@ -55,3 +55,14 @@ data class EmailSignUpRequest(
 data class TokenRefreshRequest(
     val refreshToken: String
 )
+
+/**
+ * Request model for deleting an account by phone number.
+ * @property phoneNumber The phone number of the account to delete
+ * @property password The user's password for verification
+ */
+@Serializable
+data class DeleteAccountByPhoneRequest(
+    val phoneNumber: String,
+    val password: String
+)

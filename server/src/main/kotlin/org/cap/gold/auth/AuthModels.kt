@@ -61,6 +61,12 @@ data class AuthResponse(
 )
 
 @Serializable
+data class DeleteAccountByPhoneRequest(
+    val phoneNumber: String,
+    val password: String
+)
+
+@Serializable
 data class ErrorResponse(
     val error: String,
     val code: Int = 400
