@@ -838,14 +838,7 @@ class AuthController(
 
                     call.receive<org.cap.gold.auth.DeleteAccountByPhoneRequest>().also { req ->
 
-                        firebaseWebApiKey?.let {
 
-                            req.password?.let { password ->
-                                if(!verifyWithFirebaseIdentity(req.phoneNumber + "@test.com",password,it)) {
-                                    throw InvalidCredentialsException()
-                                }
-                            }?: throw UnauthorizedException("Required current password")
-                        }?: throw UnauthorizedException("Invalid or expired token")
 
                         if (req.phoneNumber.isBlank()) {
                             throw BadRequestException("Phone number is required")
@@ -877,6 +870,14 @@ class AuthController(
                     val password = request.password
 
                     // TODO: Add your password verification logic here
+                    firebaseWebApiKey?.let {
+
+                        password?.let { password ->
+                            if(!verifyWithFirebaseIdentity(userRecord.email,password,it)) {
+                                throw InvalidCredentialsException()
+                            }
+                        }?: throw UnauthorizedException("Required current password")
+                    }?: throw UnauthorizedException("Invalid or expired token")
                     // Example:
                     // if (!verifyPassword(userRecord, password)) {
                     //     throw InvalidCredentialsException()
