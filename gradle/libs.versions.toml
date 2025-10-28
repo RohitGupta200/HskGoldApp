@@ -18,6 +18,9 @@ kotlinx-serialization = "1.6.3"
 ktor = "3.2.0"
 logback = "1.5.18"
 google-services = "4.4.3"
+firebase-crashlytics-plugin = "3.0.2"
+firebase-crashlytics = "19.3.0"
+firebase-analytics = "22.1.2"
 
 [libraries]
 # Kotlin
@@ -51,6 +54,10 @@ multiplatform-navigation = { group = "io.github.xxfast", name = "decompose-route
 
 koin-android = { module = "io.insert-koin:koin-android", version = "3.5.0" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Firebase
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics-ktx", version.ref = "firebase-crashlytics" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebase-analytics" }
 ktor-serverCore = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-serverNetty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
 ktor-serverContentNegotiation = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
@@ -69,3 +76,4 @@ kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "google-services" }
+firebaseCrashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }

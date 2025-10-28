@@ -2,6 +2,7 @@ package org.cap.gold
 
 import android.app.Application
 import com.google.firebase.FirebaseApp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import org.cap.gold.di.initKoin
 import org.cap.gold.setupPlatform
 import org.koin.android.ext.koin.androidContext
@@ -16,7 +17,12 @@ class CapGoldApp : Application() {
         super.onCreate()
         setupPlatform()
         FirebaseApp.initializeApp(this)
-        
+
+        // Initialize Firebase Crashlytics
+        FirebaseCrashlytics.getInstance().apply {
+            setCrashlyticsCollectionEnabled(true)
+        }
+
         // Initialize Koin with the base URL of your API (shared initKoin)
         initKoin(
             baseUrl = "https://capgold-server.onrender.com",

@@ -326,6 +326,13 @@ fun LoginScreenPreview() {
                 override val error: StateFlow<String?>
                     get() = TODO("Not yet implemented")
 
+                override suspend fun deleteAccount(
+                    phoneNumber: String,
+                    password: String
+                ): AuthResult<Boolean> {
+                    TODO("Not yet implemented")
+                }
+
                 override suspend fun signInWithEmail(email: String, password: String): AuthResult<User> {
                     val user = User(
                         id = "preview-user",

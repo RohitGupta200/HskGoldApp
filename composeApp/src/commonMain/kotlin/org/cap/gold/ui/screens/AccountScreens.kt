@@ -149,6 +149,42 @@ fun AccountScreen(
         // Logout primary pill at bottom
         Spacer(Modifier.height(6.dp))
         PrimaryPillButton(text = "Logout", onClick = onLogout)
+
+        // Delete Account button
+        Spacer(Modifier.height(15.dp))
+        var showDeleteDialog by remember { mutableStateOf(false) }
+        TextButton(
+            onClick = { showDeleteDialog = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Delete account", color = Color.Red, style = MaterialTheme.typography.bodyLarge)
+        }
+
+        // Delete Account Dialog
+        if (showDeleteDialog) {
+            val auth: AuthService = koinInject()
+            DeleteAccountDialog(
+                phoneNumber = user.phoneNumber,
+                onDismiss = { showDeleteDialog = false },
+                onConfirm = { password ->
+                    scope.launch {
+                        val result = auth.deleteAccount(user.phoneNumber, password)
+                        if (result is org.cap.gold.auth.model.AuthResult.Success) {
+                            statusDialog.show(success = true, message = "Account deleted successfully")
+                            delay(1500)
+                            statusDialog.hide()
+                            onLogout()
+                            showDeleteDialog = false
+                        } else if (result is org.cap.gold.auth.model.AuthResult.Error) {
+                            statusDialog.show(success = false, message = result.message)
+                            delay(2500)
+                            statusDialog.hide()
+                        }
+
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -473,4 +509,87 @@ private fun TopBar(title: String, onBack: () -> Unit) {
         )
 
     }
+}
+
+@Composable
+private fun DeleteAccountDialog(
+    phoneNumber: String,
+    onDismiss: () -> Unit,
+    onConfirm: (password: String) -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Delete account",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.Red
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Are you sure you want to delete your account? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Phone: $phoneNumber",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        error = null
+                    },
+                    label = { Text("Enter your password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(icon, contentDescription = "Toggle password visibility")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = error != null
+                )
+                if (error != null) {
+                    Text(
+                        error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (password.isBlank()) {
+                        error = "Password is required"
+                    } else {
+                        onConfirm(password)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Red,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Delete account")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

@@ -334,11 +334,11 @@ class KtorAuthService(
         }
     }
 
-    
+
     override suspend fun signOut() {
         _isLoading.value = true
         _error.value = null
-        
+
         try {
             // Cancel any in-flight child jobs (e.g., checkAuthState) to avoid races
             coroutineContext.cancelChildren()
@@ -346,7 +346,7 @@ class KtorAuthService(
             tokenManager.clearTokens()
             // Clear legacy ApiClient header used by other API services
             ApiClient.clearAuthToken()
-            
+
             // Update state
             _currentUserValue = null
             _authState.value = null
@@ -374,6 +374,56 @@ class KtorAuthService(
             _isLoading.value = false
         }
     }
+
+    override suspend fun deleteAccount(phoneNumber: String, password: String): AuthResult<Boolean> =
+        withContext(coroutineContext) {
+        _isLoading.value = true
+        _error.value = null
+
+        try {
+            if (phoneNumber.isBlank()) {
+                return@withContext AuthResult.Error("Phone number is required")
+            }
+            if (password.isBlank()) {
+                return@withContext AuthResult.Error("Password is required")
+            }
+
+            // Make the API call to delete account
+            val httpResponse = client.post("$baseUrl/api/auth/delete-by-phone") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    org.cap.gold.auth.model.requests.DeleteAccountByPhoneRequest(
+                        phoneNumber = phoneNumber,
+                        password = password
+                    )
+                )
+            }
+
+            if (httpResponse.status.value in 200..299) {
+                // Account deleted successfully, sign out the user
+//                signOut()
+                log("deleteAccount(): account deleted successfully")
+                AuthResult.Success(true)
+            } else {
+                // Parse error message from server
+                val message = try {
+                    httpResponse.body<ServerError>().error ?: httpResponse.bodyAsText()
+                } catch (_: Exception) {
+                    httpResponse.bodyAsText()
+                }
+                AuthResult.Error(message.ifBlank { "Failed to delete account" })
+            }
+        } catch (ce: CancellationException) {
+            // Propagate coroutine cancellation without converting to error
+            throw ce
+        } catch (e: Exception) {
+            val errorType = AuthErrorHandler.handleAuthError(e)
+            _error.value = errorType
+            AuthResult.Error(errorType.message, null)
+        } finally {
+            _isLoading.value = false
+        }
+    }
     
     override suspend fun checkAuthState() {
         _isLoading.value = true
@@ -394,10 +444,20 @@ class KtorAuthService(
                 return
             }
             
+            // Fetch device token to include in the request (outside try block so it's accessible in catch)
+            val token = try { getDeviceTokenFast() } catch (_: Exception) { null }
+            val plat = try {
+                val n = PlatformInfo.platform.name.lowercase()
+                if (n.contains("android")) "android" else "ios"
+            } catch (_: Exception) { null }
+
             // Try to get the current user
             val user = try {
                 val httpResponse = client.get("$baseUrl/api/auth/me") {
                     contentType(ContentType.Application.Json)
+                    // Add device token as query parameters
+                    token?.let { parameter("deviceToken", it) }
+                    plat?.let { parameter("platform", it) }
                 }
                 val response: AuthResponse = if (httpResponse.status.value in 200..299) {
                     val parsed = httpResponse.safeParseAuth()
@@ -406,7 +466,7 @@ class KtorAuthService(
                 } else {
                     throw ClientRequestException(httpResponse, "Unauthorized or invalid session")
                 }
-                
+
                 // Update tokens in case they were refreshed
                 tokenManager.updateTokens(response)
                 log("checkAuthState: /me success, tokens refreshed; candidate user=${response.user.id}")
@@ -421,7 +481,12 @@ class KtorAuthService(
                     val refreshed = tokenManager.refreshToken()
                     if (refreshed != null) {
                         log("checkAuthState: unauthorized -> refreshed tokens, retrying /me")
-                        val retryResp = client.get("$baseUrl/api/auth/me") { contentType(ContentType.Application.Json) }
+                        val retryResp = client.get("$baseUrl/api/auth/me") {
+                            contentType(ContentType.Application.Json)
+                            // Add device token on retry as well
+                            token?.let { parameter("deviceToken", it) }
+                            plat?.let { parameter("platform", it) }
+                        }
                         if (retryResp.status.value in 200..299) {
                             val parsed = retryResp.safeParseAuth()
                             if (parsed.isSuccess) {

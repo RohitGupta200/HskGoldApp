@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization") version "2.2.0"
     alias(libs.plugins.googleServices)
+    alias(libs.plugins.firebaseCrashlytics)
 }
 
 kotlin {
@@ -59,6 +60,10 @@ kotlin {
             // Firebase Cloud Messaging (explicit versions for KMP DSL)
             implementation("com.google.firebase:firebase-messaging-ktx:24.0.3")
             implementation("com.google.firebase:firebase-common-ktx:21.0.0")
+
+            // Firebase Crashlytics & Analytics
+            implementation(libs.firebase.crashlytics)
+            implementation(libs.firebase.analytics)
 
             // SLF4J binding for Android to satisfy R8 (missing StaticLoggerBinder)
             implementation("org.slf4j:slf4j-android:1.7.36")
@@ -135,8 +140,8 @@ android {
         applicationId = "org.hsk.gold"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 11
-        versionName = "1.0.0.0.8"
+        versionCode = 15
+        versionName = "1.0.0.1.1"
     }
     packaging {
         resources {

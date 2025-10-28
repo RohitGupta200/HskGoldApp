@@ -62,8 +62,15 @@ interface AuthService {
      * Cleared when a new operation starts.
      */
     val error: StateFlow<String?>
-    
+
+    /**
+     * Deletes the current user account.
+     * @param phoneNumber The phone number of the account to delete
+     * @param password The user's password for verification
+     */
+    suspend fun deleteAccount(phoneNumber: String, password: String): AuthResult<Boolean>
+
     // Account Recovery (disabled per requirements) – intentionally omitted
-    
+
     // User Management – handled elsewhere; no methods here currently
 }

@@ -683,9 +683,9 @@ class AuthController(
                     // Return a success response (don't include the code in production)
                     call.respond(
                         HttpStatusCode.OK,
-                        mapOf(
-                            "success" to true,
-                            "message" to "If an account exists with this phone number, a password reset link has been sent"
+                        org.cap.gold.auth.SuccessResponse(
+                            success = true,
+                            message = "If an account exists with this phone number, a password reset link has been sent"
                         )
                     )
                 } catch (e: Exception) {
@@ -817,9 +817,9 @@ class AuthController(
 
                     call.respond(
                         HttpStatusCode.OK,
-                        mapOf(
-                            "success" to true,
-                            "message" to "Account deleted successfully. All tokens have been revoked."
+                        org.cap.gold.auth.SuccessResponse(
+                            success = true,
+                            message = "Account deleted successfully. All tokens have been revoked."
                         )
                     )
                 } catch (e: FirebaseAuthException) {
@@ -837,7 +837,6 @@ class AuthController(
 
 
                     call.receive<org.cap.gold.auth.DeleteAccountByPhoneRequest>().also { req ->
-
 
 
                         if (req.phoneNumber.isBlank()) {
@@ -869,7 +868,7 @@ class AuthController(
                     // Extract password for verification
                     val password = request.password
 
-                    // TODO: Add your password verification logic here
+
                     firebaseWebApiKey?.let {
 
                         password?.let { password ->
@@ -894,10 +893,9 @@ class AuthController(
 
                     call.respond(
                         HttpStatusCode.OK,
-                        mapOf(
-                            "success" to true,
-                            "message" to "Account with phone number ${request.phoneNumber} has been deleted successfully. All tokens have been revoked.",
-                            "userId" to userRecord.uid
+                        org.cap.gold.auth.SuccessResponse(
+                            success = true,
+                            message = "Account with phone number ${request.phoneNumber} has been deleted successfully."
                         )
                     )
                 } catch (e: Exception) {

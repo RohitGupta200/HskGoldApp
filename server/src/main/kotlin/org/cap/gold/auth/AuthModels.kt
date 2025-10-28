@@ -71,3 +71,9 @@ data class ErrorResponse(
     val error: String,
     val code: Int = 400
 )
+
+@Serializable
+data class SuccessResponse(
+    val success: Boolean,
+    val message: String
+)
